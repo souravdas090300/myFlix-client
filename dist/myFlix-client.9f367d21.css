@@ -1,4 +1,306 @@
-.my-flix {
-  color: #4682b4;
+body {
+  color: #333;
+  background-color: #f0f2f5;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.main-view {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.main-view h1 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 2rem;
+  font-size: 2.2rem;
+}
+
+.main-view .movies-grid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem;
+  padding: 0 1rem;
+  display: grid;
+}
+
+.movie-card {
+  cursor: pointer;
+  background: #fff;
+  border-radius: 10px;
+  flex-direction: column;
+  transition: all .3s;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px #0000001a;
+}
+
+.movie-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px #0000001a;
+}
+
+.movie-card:hover .movie-poster {
+  transform: scale(1.03);
+}
+
+.movie-card .movie-poster {
+  object-fit: cover;
+  width: 100%;
+  height: 380px;
+  transition: transform .3s;
+}
+
+.movie-card .movie-info {
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 1.2rem;
+  display: flex;
+}
+
+.movie-card .movie-info h3 {
+  color: #2c3e50;
+  margin: 0 0 .5rem;
+  font-size: 1.3rem;
+}
+
+.movie-card .movie-info .movie-meta {
+  justify-content: space-between;
+  align-items: center;
+  margin: .7rem 0;
+  font-size: .95rem;
+  display: flex;
+}
+
+.movie-card .movie-info .movie-meta .rating {
+  color: #f39c12;
+  align-items: center;
+  font-weight: bold;
+  display: flex;
+}
+
+.movie-card .movie-info .movie-meta .genre {
+  color: #3498db;
+  background: #3498db1a;
+  border-radius: 4px;
+  padding: .2rem .5rem;
+  font-weight: bold;
+}
+
+.movie-card .movie-info .movie-credits {
+  color: #7f8c8d;
+  border-top: 1px solid #eee;
+  margin-top: auto;
+  padding-top: .8rem;
+  font-size: .9rem;
+}
+
+.movie-card .movie-info .movie-credits .credit-item {
+  align-items: center;
+  margin-bottom: .4rem;
+  display: flex;
+}
+
+.movie-card .movie-info .movie-credits .credit-item .credit-icon {
+  color: #7f8c8d;
+  min-width: 16px;
+  margin-right: 8px;
+  font-size: .9rem;
+}
+
+.movie-card .featured-badge {
+  color: #fff;
+  z-index: 1;
+  background: #e74c3cf2;
+  border-radius: 20px;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: .85rem;
+  display: flex;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  box-shadow: 0 2px 4px #0003;
+}
+
+.movie-card .featured-badge .featured-icon {
+  margin-right: 6px;
+  font-size: .8rem;
+}
+
+.movie-view {
+  background: #fff;
+  border-radius: 10px;
+  flex-direction: column;
+  max-width: 1200px;
+  margin: 2rem auto;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 4px 6px #0000001a;
+}
+
+@media (width >= 992px) {
+  .movie-view {
+    flex-direction: row;
+    min-height: 600px;
+  }
+}
+
+.movie-view .movie-poster-container {
+  flex: 1;
+  min-height: 400px;
+  position: relative;
+}
+
+.movie-view .movie-poster-container .movie-poster-large {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.movie-view .movie-details {
+  flex: 1.5;
+  padding: 2rem;
+}
+
+.movie-view .movie-details h1 {
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+.movie-view .movie-details .detail-section {
+  margin-bottom: 1.8rem;
+}
+
+.movie-view .movie-details .detail-section h3 {
+  color: #3498db;
+  align-items: center;
+  margin-bottom: .7rem;
+  font-size: 1.2rem;
+  display: flex;
+}
+
+.movie-view .movie-details .detail-section h3 svg {
+  margin-right: 8px;
+}
+
+.movie-view .movie-details .cast-list {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: .8rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.movie-view .movie-details .cast-list li {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: .8rem;
+  transition: transform .2s;
+}
+
+.movie-view .movie-details .cast-list li:hover {
+  background: #eef1f3;
+  transform: translateY(-3px);
+}
+
+.movie-view .movie-details .back-button {
+  color: #fff;
+  cursor: pointer;
+  background: #3498db;
+  border: none;
+  border-radius: 6px;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: .8rem 1.8rem;
+  font-size: 1rem;
+  transition: all .3s;
+  display: flex;
+}
+
+.movie-view .movie-details .back-button:hover {
+  background: #217dbb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px #0000001a;
+}
+
+.movie-view .movie-details .back-button svg {
+  margin-right: 8px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.movie-card {
+  animation: .5s forwards fadeIn;
+}
+
+.movie-card:first-child {
+  animation-delay: .1s;
+}
+
+.movie-card:nth-child(2) {
+  animation-delay: .2s;
+}
+
+.movie-card:nth-child(3) {
+  animation-delay: .3s;
+}
+
+.movie-card:nth-child(4) {
+  animation-delay: .4s;
+}
+
+.movie-card:nth-child(5) {
+  animation-delay: .5s;
+}
+
+.movie-card:nth-child(6) {
+  animation-delay: .6s;
+}
+
+.movie-card:nth-child(7) {
+  animation-delay: .7s;
+}
+
+.movie-card:nth-child(8) {
+  animation-delay: .8s;
+}
+
+.movie-card:nth-child(9) {
+  animation-delay: .9s;
+}
+
+.movie-card:nth-child(10) {
+  animation-delay: 1s;
+}
+
+@media (width <= 768px) {
+  .movies-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .movie-card .movie-poster {
+    height: 320px;
+  }
+
+  .movie-view {
+    padding: 1.5rem;
+  }
 }
 /*# sourceMappingURL=myFlix-client.9f367d21.css.map */

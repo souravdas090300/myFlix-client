@@ -1,5 +1,302 @@
-$color: steelblue;
+// Variables
+$colors: (
+  primary: #3498db,
+  secondary: #2c3e50,
+  accent: #e74c3c,
+  rating: #f39c12,
+  text: #333,
+  light-text: #7f8c8d,
+  background: #f0f2f5,
+  card-bg: #ffffff
+);
 
-.my-flix {
-  color: $color;
+$shadows: (
+  regular: 0 4px 6px rgba(0, 0, 0, 0.1),
+  hover: 0 10px 20px rgba(0, 0, 0, 0.1),
+  badge: 0 2px 4px rgba(0, 0, 0, 0.2),
+  button: 0 4px 8px rgba(0, 0, 0, 0.1)
+);
+
+$breakpoints: (
+  mobile: 768px,
+  desktop: 992px
+);
+
+// Mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+}
+
+@mixin transition($property: all, $duration: 0.3s, $easing: ease) {
+  transition: $property $duration $easing;
+}
+
+@mixin card-hover-effect {
+  transform: translateY(-5px);
+  box-shadow: map-get($shadows, hover);
+}
+
+// Base Styles
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: map-get($colors, background);
+  color: map-get($colors, text);
+  line-height: 1.6;
+}
+
+// Main View
+.main-view {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: map-get($colors, secondary);
+    font-size: 2.2rem;
+  }
+
+  .movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    padding: 0 1rem;
+  }
+}
+
+// Movie Card
+.movie-card {
+  background: map-get($colors, card-bg);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: map-get($shadows, regular);
+  @include transition;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    @include card-hover-effect;
+
+    .movie-poster {
+      transform: scale(1.03);
+    }
+  }
+
+  .movie-poster {
+    width: 100%;
+    height: 380px;
+    object-fit: cover;
+    @include transition(transform);
+  }
+
+  .movie-info {
+    padding: 1.2rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+
+    h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.3rem;
+      color: map-get($colors, secondary);
+    }
+
+    .movie-meta {
+      @include flex-center;
+      justify-content: space-between;
+      margin: 0.7rem 0;
+      font-size: 0.95rem;
+
+      .rating {
+        color: map-get($colors, rating);
+        font-weight: bold;
+        @include flex-center;
+      }
+
+      .genre {
+        color: map-get($colors, primary);
+        font-weight: bold;
+        background: rgba(map-get($colors, primary), 0.1);
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+      }
+    }
+
+    .movie-credits {
+      margin-top: auto;
+      padding-top: 0.8rem;
+      font-size: 0.9rem;
+      color: map-get($colors, light-text);
+      border-top: 1px solid #eee;
+
+      .credit-item {
+        @include flex-center;
+        margin-bottom: 0.4rem;
+
+        .credit-icon {
+          margin-right: 8px;
+          color: map-get($colors, light-text);
+          font-size: 0.9rem;
+          min-width: 16px;
+        }
+      }
+    }
+  }
+
+  .featured-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(map-get($colors, accent), 0.95);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    @include flex-center;
+    font-size: 0.85rem;
+    z-index: 1;
+    box-shadow: map-get($shadows, badge);
+
+    .featured-icon {
+      margin-right: 6px;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// Movie View
+.movie-view {
+  display: flex;
+  flex-direction: column;
+  max-width: 1200px;
+  margin: 2rem auto;
+  background: map-get($colors, card-bg);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: map-get($shadows, regular);
+
+  @media (min-width: map-get($breakpoints, desktop)) {
+    flex-direction: row;
+    min-height: 600px;
+  }
+
+  .movie-poster-container {
+    position: relative;
+    flex: 1;
+    min-height: 400px;
+
+    .movie-poster-large {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .movie-details {
+    flex: 1.5;
+    padding: 2rem;
+
+    h1 {
+      margin-top: 0;
+      color: map-get($colors, secondary);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .detail-section {
+      margin-bottom: 1.8rem;
+
+      h3 {
+        margin-bottom: 0.7rem;
+        color: map-get($colors, primary);
+        font-size: 1.2rem;
+        @include flex-center;
+
+        svg {
+          margin-right: 8px;
+        }
+      }
+    }
+
+    .cast-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.8rem;
+      list-style: none;
+      padding: 0;
+
+      li {
+        background: #f8f9fa;
+        padding: 0.8rem;
+        border-radius: 6px;
+        @include transition(transform, 0.2s);
+
+        &:hover {
+          transform: translateY(-3px);
+          background: #eef1f3;
+        }
+      }
+    }
+
+    .back-button {
+      background: map-get($colors, primary);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      @include transition;
+      margin-top: 1.5rem;
+      @include flex-center;
+
+      &:hover {
+        background: darken(map-get($colors, primary), 10%);
+        transform: translateY(-2px);
+        box-shadow: map-get($shadows, button);
+      }
+
+      svg {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.movie-card {
+  animation: fadeIn 0.5s ease forwards;
+
+  @for $i from 1 through 10 {
+    &:nth-child(#{$i}) {
+      animation-delay: $i * 0.1s;
+    }
+  }
+}
+
+// Responsive Adjustments
+@media (max-width: map-get($breakpoints, mobile)) {
+  .movies-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  
+  .movie-card {
+    .movie-poster {
+      height: 320px;
+    }
+  }
+  
+.movie-view {
+    padding: 1.5rem;
+  }
 }
