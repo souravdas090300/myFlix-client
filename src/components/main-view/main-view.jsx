@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { MovieCard } from "../movie-card/movie-card";
 import { MovieView } from "../movie-view/movie-view";
+import { LoginView } from "../login-view/login-view";
 
 export const MainView = () => {
   const [movies, setMovies] = useState([]);
@@ -15,6 +16,10 @@ export const MainView = () => {
         console.error("Error fetching movies:", error);
       });
   }, []);
+
+  if (!user) {
+    return <LoginView />;
+  }
 
   if (selectedMovie) {
     return (
@@ -42,29 +47,4 @@ export const MainView = () => {
       ))}
     </div>
   );
-};
-
-MainView.propTypes = {
-  movies: PropTypes.arrayOf(
-    PropTypes.shape({
-      _id: PropTypes.string.isRequired,
-      Title: PropTypes.string.isRequired,
-      Description: PropTypes.string.isRequired,
-      ImagePath: PropTypes.string.isRequired,
-      ReleaseYear: PropTypes.number.isRequired,
-      Genre: PropTypes.shape({
-        Name: PropTypes.string.isRequired,
-        Description: PropTypes.string
-      }).isRequired,
-      Director: PropTypes.shape({
-        Name: PropTypes.string.isRequired,
-        Bio: PropTypes.string,
-        Birth: PropTypes.string
-      }).isRequired,
-      Featured: PropTypes.bool,
-      Actors: PropTypes.arrayOf(PropTypes.string).isRequired,
-      actresses: PropTypes.arrayOf(PropTypes.string),
-      IMDbRating: PropTypes.number.isRequired
-    })
-  )
 };
