@@ -5,20 +5,40 @@ import { MovieView } from "../movie-view/movie-view";
 import { LoginView } from "../login-view/login-view";
 
 export const MainView = () => {
+  // Get user and token from localStorage if available
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const storedToken = localStorage.getItem("token");
+  const [user, setUser] = useState(storedUser ? storedUser : null);
+  const [token, setToken] = useState(storedToken ? storedToken : null);
   const [movies, setMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
 
   useEffect(() => {
-    fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies")
+    if (!token) return;
+
+    fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((response) => response.json())
-      .then((data) => setMovies(data))
+      .then((movies) => {
+        setMovies(movies);
+      })
       .catch((error) => {
         console.error("Error fetching movies:", error);
       });
-  }, []);
+  }, [token]);
 
   if (!user) {
-    return <LoginView />;
+    return (
+      <LoginView
+        onLoggedIn={(user, token) => {
+          setUser(user);
+          setToken(token);
+          localStorage.setItem("user", JSON.stringify(user));
+          localStorage.setItem("token", token);
+        }}
+      />
+    );
   }
 
   if (selectedMovie) {
@@ -32,12 +52,24 @@ export const MainView = () => {
   }
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-      gap: "20px",
-      padding: "20px"
-    }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+        gap: "20px",
+        padding: "20px"
+      }}
+    >
+      <button
+        onClick={() => {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+        }}
+      >
+        Logout
+      </button>
       {movies.map((movie) => (
         <MovieCard
           key={movie._id || movie.ID || movie.id}
@@ -48,3 +80,5 @@ export const MainView = () => {
     </div>
   );
 };
+
+MainView.propTypes = {};
