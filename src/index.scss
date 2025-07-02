@@ -1,4 +1,11 @@
-// Variables
+$primary: #3498db;
+$secondary: #2c3e50;
+$body-bg: #f8f9fa;
+
+@import '~bootstrap/scss/bootstrap.scss';
+
+// --- Your custom variables and styles below ---
+
 $colors: (
   primary: #3498db,
   secondary: #2c3e50,
@@ -296,7 +303,7 @@ body {
     }
   }
   
-.movie-view {
+  .movie-view {
     padding: 1.5rem;
   }
 }

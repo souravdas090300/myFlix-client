@@ -1,12 +1,20 @@
 import React, { useState } from "react";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Alert from "react-bootstrap/Alert";
 
 export const LoginView = ({ onLoggedIn }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = (event) => {
-    // this prevents the default behavior of the form which is to reload the entire page
     event.preventDefault();
+
+    if (username.length < 3 || password.length < 5) {
+      setError("Username must be at least 3 chars and password at least 5 chars.");
+      return;
+    }
 
     const data = {
       Username: username,
@@ -15,52 +23,51 @@ export const LoginView = ({ onLoggedIn }) => {
 
     fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/login", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log("Login response: ", data);
-        if (data.user) {
+        if (data.user && data.token) {
           localStorage.setItem("user", JSON.stringify(data.user));
           localStorage.setItem("token", data.token);
           onLoggedIn(data.user, data.token);
         } else {
-          alert("No such user");
+          setError("Invalid username or password.");
         }
       })
-      .catch((e) => {
-        alert("Something went wrong");
-      });
+      .catch(() => setError("Something went wrong. Please try again."));
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>
-        Username:
-        <input
+    <Form onSubmit={handleSubmit} className="mb-4">
+      {error && <Alert variant="danger">{error}</Alert>}
+      <Form.Group className="mb-3" controlId="formUsername">
+        <Form.Label>Username:</Form.Label>
+        <Form.Control
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter your username"
           required
+          minLength={3}
+          placeholder="Enter username"
         />
-      </label>
-      <label>
-        Password:
-        <input
+      </Form.Group>
+
+      <Form.Group className="mb-3" controlId="formPassword">
+        <Form.Label>Password:</Form.Label>
+        <Form.Control
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
           required
+          minLength={5}
+          placeholder="Enter password"
         />
-      </label>
-      <button type="submit">
+      </Form.Group>
+      <Button variant="primary" type="submit">
         Submit
-      </button>
-    </form>
+      </Button>
+    </Form>
   );
 };
