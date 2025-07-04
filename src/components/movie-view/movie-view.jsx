@@ -1,53 +1,84 @@
-// src/components/movie-view/movie-view.jsx
 import React from 'react';
 import PropTypes from 'prop-types';
+import { Link } from "react-router-dom";
+import { Container, Row, Col, Card, ListGroup, Badge } from 'react-bootstrap'; // Import Bootstrap components
 
-export const MovieView = ({ movie, onBackClick }) => {
+export const MovieView = ({ movie }) => {
   return (
-    <div className="movie-view">
-      <div className="movie-poster-container">
-        <img src={movie.ImagePath} alt={movie.Title} className="movie-poster-large" />
-        <div className="movie-meta">
-          <span className="rating">{movie.IMDbRating}/10</span>
-          <span className="year">{movie.ReleaseYear}</span>
-          {movie.Featured && <span className="featured">Featured</span>}
-        </div>
-      </div>
-      
-      <div className="movie-details">
-        <h1>{movie.Title}</h1>
+    <Container className="movie-view mt-4">
+      <Row>
+        <Col md={5} lg={4} className="mb-4">
+          <Card className="h-100">
+            <Card.Img 
+              variant="top" 
+              src={movie.ImagePath} 
+              alt={movie.Title} 
+              className="movie-poster-large"
+            />
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <Badge bg="warning" text="dark">
+                  IMDb: {movie.IMDbRating}/10
+                </Badge>
+                <Badge bg="secondary">
+                  {movie.ReleaseYear}
+                </Badge>
+                {movie.Featured && (
+                  <Badge bg="danger">Featured</Badge>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
         
-        <div className="detail-section">
-          <h3>Description</h3>
-          <p>{movie.Description}</p>
-        </div>
-        
-        <div className="detail-section">
-          <h3>Genre</h3>
-          <p>{movie.Genre.Name} - {movie.Genre.Description}</p>
-        </div>
-        
-        <div className="detail-section">
-          <h3>Director</h3>
-          <p><strong>{movie.Director.Name}</strong></p>
-          <p>Born: {movie.Director.Birth}</p>
-          <p>{movie.Director.Bio}</p>
-        </div>
-        
-        <div className="detail-section">
-          <h3>Cast</h3>
-          <ul className="cast-list">
-            {movie.Actors.map((actor, index) => (
-              <li key={index}>{actor}</li>
-            ))}
-          </ul>
-        </div>
-        
-        <button onClick={onBackClick} className="back-button">
-          Back to Movies
-        </button>
-      </div>
-    </div>
+        <Col md={7} lg={8}>
+          <Card className="h-100">
+            <Card.Body>
+              <Card.Title as="h1" className="mb-4">{movie.Title}</Card.Title>
+              
+              <Card.Text className="mb-4">
+                <h3>Description</h3>
+                <p>{movie.Description}</p>
+              </Card.Text>
+              
+              <Card.Text className="mb-4">
+                <h3>Genre</h3>
+                <p>
+                  <strong>{movie.Genre.Name}</strong> - {movie.Genre.Description}
+                </p>
+              </Card.Text>
+              
+              <Card.Text className="mb-4">
+                <h3>Director</h3>
+                <p><strong>{movie.Director.Name}</strong></p>
+                <p>Born: {movie.Director.Birth}</p>
+                <p>{movie.Director.Bio}</p>
+              </Card.Text>
+              
+              <div className="mb-4">
+                <h3>Cast</h3>
+                <ListGroup horizontal className="flex-wrap">
+                  {movie.Actors.map((actor, index) => (
+                    <ListGroup.Item key={index} className="m-1">
+                      {actor}
+                    </ListGroup.Item>
+                  ))}
+                  {movie.actresses && movie.actresses.map((actress, idx) => (
+                    <ListGroup.Item key={`a-${idx}`} className="m-1">
+                      {actress}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </div>
+              
+              <Link to="/" className="btn btn-primary mt-3">
+                Back to Movies
+              </Link>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 };
 
@@ -72,6 +103,5 @@ MovieView.propTypes = {
     }).isRequired,
     Actors: PropTypes.arrayOf(PropTypes.string).isRequired,
     actresses: PropTypes.arrayOf(PropTypes.string)
-  }).isRequired,
-  onBackClick: PropTypes.func.isRequired
+  }).isRequired
 };
