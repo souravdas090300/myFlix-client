@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Form, Button, Alert } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { Form, Button, Alert, Card, Container, Row, Col, Spinner } from "react-bootstrap";
+import { useNavigate, Link } from "react-router-dom";
 
 export const SignupView = ({ onSignedUp }) => {
   const [formData, setFormData] = useState({
@@ -10,7 +10,8 @@ export const SignupView = ({ onSignedUp }) => {
     email: "",
     birthday: ""
   });
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -20,31 +21,45 @@ export const SignupView = ({ onSignedUp }) => {
       ...formData,
       [name]: value
     });
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: null
+      });
+    }
   };
 
   const validateForm = () => {
+    const newErrors = {};
+    
     if (formData.username.length < 3) {
-      setError("Username must be at least 3 characters");
-      return false;
+      newErrors.username = "Username must be at least 3 characters";
     }
+    
     if (formData.password.length < 5) {
-      setError("Password must be at least 5 characters");
-      return false;
+      newErrors.password = "Password must be at least 5 characters";
     }
+    
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match");
-      return false;
+      newErrors.confirmPassword = "Passwords don't match";
     }
-    if (!formData.email.includes("@")) {
-      setError("Please enter a valid email address");
-      return false;
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
     }
-    return true;
+    
+    if (!formData.birthday) {
+      newErrors.birthday = "Birthday is required";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError("");
+    setServerError("");
     
     if (!validateForm()) return;
 
@@ -62,96 +77,157 @@ export const SignupView = ({ onSignedUp }) => {
         })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Signup failed");
+        throw new Error(data.message || "Signup failed. Please try again.");
       }
 
-      const data = await response.json();
-      onSignedUp(data.user, data.token);
-      navigate("/"); // Redirect to home after successful signup
+      if (data.user && data.token) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
+        onSignedUp(data.user, data.token);
+        navigate("/");
+      }
     } catch (error) {
-      setError(error.message || "An error occurred during signup");
+      setServerError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Form onSubmit={handleSubmit} className="signup-form">
-      <h2 className="mb-4">Sign Up</h2>
-      
-      {error && <Alert variant="danger" dismissible onClose={() => setError("")}>{error}</Alert>}
+    <Container className="py-5">
+      <Row className="justify-content-center">
+        <Col md={8} lg={6} xl={5}>
+          <Card className="shadow">
+            <Card.Body className="p-4">
+              <Card.Title className="text-center mb-4">
+                <h2>Create Account</h2>
+                <p className="text-muted">Join our movie community today</p>
+              </Card.Title>
+              
+              {serverError && (
+                <Alert variant="danger" dismissible onClose={() => setServerError("")}>
+                  {serverError}
+                </Alert>
+              )}
 
-      <Form.Group className="mb-3">
-        <Form.Label>Username</Form.Label>
-        <Form.Control
-          type="text"
-          name="username"
-          value={formData.username}
-          onChange={handleChange}
-          required
-          minLength={3}
-          placeholder="Enter username"
-        />
-      </Form.Group>
+              <Form onSubmit={handleSubmit} noValidate>
+                <Form.Group className="mb-3">
+                  <Form.Label>Username</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    isInvalid={!!errors.username}
+                    placeholder="Enter username"
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.username}
+                  </Form.Control.Feedback>
+                </Form.Group>
 
-      <Form.Group className="mb-3">
-        <Form.Label>Password</Form.Label>
-        <Form.Control
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          minLength={5}
-          placeholder="Enter password"
-        />
-      </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Email</Form.Label>
+                  <Form.Control
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    isInvalid={!!errors.email}
+                    placeholder="Enter email"
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.email}
+                  </Form.Control.Feedback>
+                </Form.Group>
 
-      <Form.Group className="mb-3">
-        <Form.Label>Confirm Password</Form.Label>
-        <Form.Control
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-          placeholder="Confirm password"
-        />
-      </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    isInvalid={!!errors.password}
+                    placeholder="Enter password"
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.password}
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    At least 5 characters
+                  </Form.Text>
+                </Form.Group>
 
-      <Form.Group className="mb-3">
-        <Form.Label>Email</Form.Label>
-        <Form.Control
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          placeholder="Enter email"
-        />
-      </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>Confirm Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    isInvalid={!!errors.confirmPassword}
+                    placeholder="Confirm password"
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.confirmPassword}
+                  </Form.Control.Feedback>
+                </Form.Group>
 
-      <Form.Group className="mb-3">
-        <Form.Label>Birthday</Form.Label>
-        <Form.Control
-          type="date"
-          name="birthday"
-          value={formData.birthday}
-          onChange={handleChange}
-          required
-        />
-      </Form.Group>
+                <Form.Group className="mb-4">
+                  <Form.Label>Birthday</Form.Label>
+                  <Form.Control
+                    type="date"
+                    name="birthday"
+                    value={formData.birthday}
+                    onChange={handleChange}
+                    isInvalid={!!errors.birthday}
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.birthday}
+                  </Form.Control.Feedback>
+                </Form.Group>
 
-      <Button 
-        variant="primary" 
-        type="submit" 
-        disabled={isLoading}
-        className="w-100"
-      >
-        {isLoading ? "Signing Up..." : "Sign Up"}
-      </Button>
-    </Form>
+                <div className="d-grid gap-2 mb-3">
+                  <Button 
+                    variant="primary" 
+                    type="submit" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Spinner
+                          as="span"
+                          animation="border"
+                          size="sm"
+                          role="status"
+                          aria-hidden="true"
+                          className="me-2"
+                        />
+                        Creating Account...
+                      </>
+                    ) : "Sign Up"}
+                  </Button>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-muted">
+                    Already have an account? <Link to="/login">Log in</Link>
+                  </p>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 };
