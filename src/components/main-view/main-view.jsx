@@ -1,17 +1,24 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
+import { MovieCard } from "../movie-card/movie-card";
+import { MovieView } from "../movie-view/movie-view";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
-import { MovieCard } from "../movie-card/movie-card";
-import { MovieView } from "../movie-view/movie-view";
 import { ProfileView } from "../profile-view/profile-view";
-import { NavigationBar } from "../navigation-bar/navigation-bar";
+import { NavigationBar } from "../navigation-bar/navigation-bar";  // Ensure this file exists
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 
-export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserDeregister }) => {
+export const MainView = ({ onUserUpdate, onUserDeregister }) => {
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const storedToken = localStorage.getItem("token");
+  const [user, setUser] = useState(storedUser || null);
+  const [token, setToken] = useState(storedToken || null);
+  const [movies, setMovies] = useState([]);
+
   useEffect(() => {
-    if (!token || (movies && movies.length > 0)) return;
+    if (!token) return;
 
     const fetchMovies = async () => {
       try {
@@ -27,7 +34,7 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
     };
 
     fetchMovies();
-  }, [token, setMovies, movies]);
+  }, [token]);
 
   function MovieViewWrapper() {
     const { movieId } = useParams();
@@ -36,15 +43,7 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
     if (!movies) return <Col>Loading movies...</Col>;
     if (!movie) return <Col>Movie not found.</Col>;
 
-    return (
-      <Col md={8}>
-        <MovieView 
-          movie={movie} 
-          user={user} 
-          token={token} 
-        />
-      </Col>
-    );
+    return <MovieView movie={movie} user={user} token={token} />;
   }
 
   const AuthenticatedLayout = ({ children }) => (
@@ -52,9 +51,9 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
       <NavigationBar
         user={user}
         onLoggedOut={() => {
-          onUserUpdate(null);
+          setUser(null);
+          setToken(null);
           localStorage.clear();
-          window.location.href = '/login';
         }}
       />
       <Row className="justify-content-md-center mt-4">
@@ -73,7 +72,8 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
               element={
                 <LoginView
                   onLoggedIn={(user, token) => {
-                    onUserUpdate(user);
+                    setUser(user);
+                    setToken(token);
                     localStorage.setItem("user", JSON.stringify(user));
                     localStorage.setItem("token", token);
                   }}
@@ -85,7 +85,8 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
               element={
                 <SignupView 
                   onSignedUp={(user, token) => {
-                    onUserUpdate(user);
+                    setUser(user);
+                    setToken(token);
                     localStorage.setItem("user", JSON.stringify(user));
                     localStorage.setItem("token", token);
                   }} 
@@ -109,8 +110,15 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
               user={user}
               token={token}
               movies={movies}
-              onUserUpdate={onUserUpdate}
-              onUserDeregister={onUserDeregister}
+              onUserUpdate={(user) => {
+                setUser(user);
+                localStorage.setItem("user", JSON.stringify(user));
+              }}
+              onUserDeregister={() => {
+                setUser(null);
+                setToken(null);
+                localStorage.clear();
+              }}
             />
           </AuthenticatedLayout>
         }
@@ -148,4 +156,9 @@ export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserD
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
+};
+
+MainView.propTypes = {
+  onUserUpdate: PropTypes.func,
+  onUserDeregister: PropTypes.func
 };
