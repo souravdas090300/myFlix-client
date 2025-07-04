@@ -1,84 +1,151 @@
-// src/components/main-view/main-view.jsx
-import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import { MovieCard } from "../movie-card/movie-card";
-import { MovieView } from "../movie-view/movie-view";
+import { useState, useEffect } from "react";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
+import { MovieCard } from "../movie-card/movie-card";
+import { MovieView } from "../movie-view/movie-view";
+import { ProfileView } from "../profile-view/profile-view";
+import { NavigationBar } from "../navigation-bar/navigation-bar";
 import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 
-export const MainView = () => {
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const storedToken = localStorage.getItem("token");
-  const [user, setUser] = useState(storedUser ? storedUser : null);
-  const [token, setToken] = useState(storedToken ? storedToken : null);
-  const [movies, setMovies] = useState([]);
-  const [selectedMovie, setSelectedMovie] = useState(null);
-
+export const MainView = ({ user, token, movies, setMovies, onUserUpdate, onUserDeregister }) => {
   useEffect(() => {
-    if (!token) return;
-    fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies", {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then((response) => response.json())
-      .then((movies) => setMovies(movies))
-      .catch((error) => console.error("Error fetching movies:", error));
-  }, [token]);
+    if (!token || (movies && movies.length > 0)) return;
+
+    const fetchMovies = async () => {
+      try {
+        const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch movies');
+        const data = await response.json();
+        setMovies(data);
+      } catch (error) {
+        console.error("Error fetching movies:", error);
+      }
+    };
+
+    fetchMovies();
+  }, [token, setMovies, movies]);
+
+  function MovieViewWrapper() {
+    const { movieId } = useParams();
+    const movie = movies?.find((m) => m._id === movieId);
+
+    if (!movies) return <Col>Loading movies...</Col>;
+    if (!movie) return <Col>Movie not found.</Col>;
+
+    return (
+      <Col md={8}>
+        <MovieView 
+          movie={movie} 
+          user={user} 
+          token={token} 
+        />
+      </Col>
+    );
+  }
+
+  const AuthenticatedLayout = ({ children }) => (
+    <>
+      <NavigationBar
+        user={user}
+        onLoggedOut={() => {
+          onUserUpdate(null);
+          localStorage.clear();
+          window.location.href = '/login';
+        }}
+      />
+      <Row className="justify-content-md-center mt-4">
+        {children}
+      </Row>
+    </>
+  );
 
   if (!user) {
     return (
-      <>
-        <LoginView
-          onLoggedIn={(user, token) => {
-            setUser(user);
-            setToken(token);
-            localStorage.setItem("user", JSON.stringify(user));
-            localStorage.setItem("token", token);
-          }}
-        />
-        <SignupView />
-      </>
+      <Row className="justify-content-md-center">
+        <Col md={6} lg={5}>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <LoginView
+                  onLoggedIn={(user, token) => {
+                    onUserUpdate(user);
+                    localStorage.setItem("user", JSON.stringify(user));
+                    localStorage.setItem("token", token);
+                  }}
+                />
+              }
+            />
+            <Route 
+              path="/signup" 
+              element={
+                <SignupView 
+                  onSignedUp={(user, token) => {
+                    onUserUpdate(user);
+                    localStorage.setItem("user", JSON.stringify(user));
+                    localStorage.setItem("token", token);
+                  }} 
+                />
+              } 
+            />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Col>
+      </Row>
     );
-  }
-
-  if (selectedMovie) {
-    return (
-      <MovieView movie={selectedMovie} onBackClick={() => setSelectedMovie(null)} />
-    );
-  }
-
-  if (movies.length === 0) {
-    return <div>The list is empty!</div>;
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-        gap: "20px",
-        padding: "20px"
-      }}
-    >
-      <button
-        onClick={() => {
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem("user");
-          localStorage.removeItem("token");
-        }}
-      >
-        Logout
-      </button>
-      {movies.map((movie) => (
-        <MovieCard
-          key={movie._id || movie.ID || movie.id}
-          movie={movie}
-          onMovieClick={setSelectedMovie}
-        />
-      ))}
-    </div>
+    <Routes>
+      <Route
+        path="/profile"
+        element={
+          <AuthenticatedLayout>
+            <ProfileView
+              user={user}
+              token={token}
+              movies={movies}
+              onUserUpdate={onUserUpdate}
+              onUserDeregister={onUserDeregister}
+            />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/movies/:movieId"
+        element={
+          <AuthenticatedLayout>
+            <MovieViewWrapper />
+          </AuthenticatedLayout>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <AuthenticatedLayout>
+            {!movies ? (
+              <Col>Loading movies...</Col>
+            ) : movies.length === 0 ? (
+              <Col>No movies found.</Col>
+            ) : (
+              movies.map((movie) => (
+                <Col key={movie._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
+                  <MovieCard 
+                    movie={movie} 
+                    user={user} 
+                    token={token} 
+                  />
+                </Col>
+              ))
+            )}
+          </AuthenticatedLayout>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
-
-MainView.propTypes = {};

@@ -303,4 +303,36 @@ body {
     padding: 1.5rem;
   }
 }
+
+.text-primary {
+  color: #3498db;
+}
+
+.text-secondary {
+  color: #2c3e50;
+}
+
+.bg-light {
+  background-color: #f0f2f5;
+}
+
+.shadow-sm {
+  box-shadow: 0 4px 6px #0000001a;
+}
+
+.loading-spinner {
+  border: .25rem solid #3498db33;
+  border-top-color: #3498db;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  animation: 1s ease-in-out infinite spin;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 /*# sourceMappingURL=myFlix-client.9f367d21.css.map */
