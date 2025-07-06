@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Link } from "react-router-dom";
-import { Container, Row, Col, Card, ListGroup, Badge } from 'react-bootstrap'; // Import Bootstrap components
+import { Container, Row, Col, Card, ListGroup, Badge } from 'react-bootstrap';
 
 export const MovieView = ({ movie }) => {
   return (
@@ -36,24 +36,26 @@ export const MovieView = ({ movie }) => {
             <Card.Body>
               <Card.Title as="h1" className="mb-4">{movie.Title}</Card.Title>
               
-              <Card.Text className="mb-4">
+              <div className="mb-4">
                 <h3>Description</h3>
-                <p>{movie.Description}</p>
-              </Card.Text>
+                <Card.Text>{movie.Description}</Card.Text>
+              </div>
               
-              <Card.Text className="mb-4">
+              <div className="mb-4">
                 <h3>Genre</h3>
-                <p>
+                <Card.Text>
                   <strong>{movie.Genre.Name}</strong> - {movie.Genre.Description}
-                </p>
-              </Card.Text>
+                </Card.Text>
+              </div>
               
-              <Card.Text className="mb-4">
+              <div className="mb-4">
                 <h3>Director</h3>
-                <p><strong>{movie.Director.Name}</strong></p>
-                <p>Born: {movie.Director.Birth}</p>
-                <p>{movie.Director.Bio}</p>
-              </Card.Text>
+                <Card.Text>
+                  <strong>{movie.Director.Name}</strong><br />
+                  Born: {movie.Director.Birth}<br />
+                  {movie.Director.Bio}
+                </Card.Text>
+              </div>
               
               <div className="mb-4">
                 <h3>Cast</h3>

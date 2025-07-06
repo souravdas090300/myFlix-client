@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, Button, Alert, Card, Container, Row, Col, Spinner } from "react-bootstrap";
+import { Form, Button, Alert, Card, Spinner } from "react-bootstrap";
 import { useNavigate, Link } from "react-router-dom";
 
 export const SignupView = ({ onSignedUp }) => {
@@ -21,7 +21,6 @@ export const SignupView = ({ onSignedUp }) => {
       ...formData,
       [name]: value
     });
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -97,137 +96,131 @@ export const SignupView = ({ onSignedUp }) => {
   };
 
   return (
-    <Container className="py-5">
-      <Row className="justify-content-center">
-        <Col md={8} lg={6} xl={5}>
-          <Card className="shadow">
-            <Card.Body className="p-4">
-              <Card.Title className="text-center mb-4">
-                <h2>Create Account</h2>
-                <p className="text-muted">Join our movie community today</p>
-              </Card.Title>
-              
-              {serverError && (
-                <Alert variant="danger" dismissible onClose={() => setServerError("")}>
-                  {serverError}
-                </Alert>
-              )}
+    <Card className="shadow">
+      <Card.Body className="p-4">
+        <Card.Title className="text-center mb-4">
+          <h2>Create Account</h2>
+          <p className="text-muted">Join our movie community today</p>
+        </Card.Title>
+        
+        {serverError && (
+          <Alert variant="danger" dismissible onClose={() => setServerError("")}>
+            {serverError}
+          </Alert>
+        )}
 
-              <Form onSubmit={handleSubmit} noValidate>
-                <Form.Group className="mb-3">
-                  <Form.Label>Username</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    isInvalid={!!errors.username}
-                    placeholder="Enter username"
-                    required
+        <Form onSubmit={handleSubmit} noValidate>
+          <Form.Group className="mb-3">
+            <Form.Label>Username</Form.Label>
+            <Form.Control
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              isInvalid={!!errors.username}
+              placeholder="Enter username"
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              {errors.username}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Email</Form.Label>
+            <Form.Control
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              isInvalid={!!errors.email}
+              placeholder="Enter email"
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              {errors.email}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Password</Form.Label>
+            <Form.Control
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              isInvalid={!!errors.password}
+              placeholder="Enter password"
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              {errors.password}
+            </Form.Control.Feedback>
+            <Form.Text className="text-muted">
+              At least 5 characters
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Confirm Password</Form.Label>
+            <Form.Control
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              isInvalid={!!errors.confirmPassword}
+              placeholder="Confirm password"
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              {errors.confirmPassword}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group className="mb-4">
+            <Form.Label>Birthday</Form.Label>
+            <Form.Control
+              type="date"
+              name="birthday"
+              value={formData.birthday}
+              onChange={handleChange}
+              isInvalid={!!errors.birthday}
+              required
+            />
+            <Form.Control.Feedback type="invalid">
+              {errors.birthday}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <div className="d-grid gap-2 mb-3">
+            <Button 
+              variant="primary" 
+              type="submit" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                    className="me-2"
                   />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.username}
-                  </Form.Control.Feedback>
-                </Form.Group>
+                  Creating Account...
+                </>
+              ) : "Sign Up"}
+            </Button>
+          </div>
 
-                <Form.Group className="mb-3">
-                  <Form.Label>Email</Form.Label>
-                  <Form.Control
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    isInvalid={!!errors.email}
-                    placeholder="Enter email"
-                    required
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.email}
-                  </Form.Control.Feedback>
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Password</Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    isInvalid={!!errors.password}
-                    placeholder="Enter password"
-                    required
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.password}
-                  </Form.Control.Feedback>
-                  <Form.Text className="text-muted">
-                    At least 5 characters
-                  </Form.Text>
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Confirm Password</Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    isInvalid={!!errors.confirmPassword}
-                    placeholder="Confirm password"
-                    required
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.confirmPassword}
-                  </Form.Control.Feedback>
-                </Form.Group>
-
-                <Form.Group className="mb-4">
-                  <Form.Label>Birthday</Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="birthday"
-                    value={formData.birthday}
-                    onChange={handleChange}
-                    isInvalid={!!errors.birthday}
-                    required
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.birthday}
-                  </Form.Control.Feedback>
-                </Form.Group>
-
-                <div className="d-grid gap-2 mb-3">
-                  <Button 
-                    variant="primary" 
-                    type="submit" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                          className="me-2"
-                        />
-                        Creating Account...
-                      </>
-                    ) : "Sign Up"}
-                  </Button>
-                </div>
-
-                <div className="text-center">
-                  <p className="text-muted">
-                    Already have an account? <Link to="/login">Log in</Link>
-                  </p>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+          <div className="text-center">
+            <p className="text-muted">
+              Already have an account? <Link to="/login">Log in</Link>
+            </p>
+          </div>
+        </Form>
+      </Card.Body>
+    </Card>
   );
 };

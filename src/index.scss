@@ -1,24 +1,24 @@
-// First import Bootstrap
-@import "~bootstrap/scss/bootstrap";
+@import '~bootstrap/scss/bootstrap.scss';
 
-// Then you can add your custom styles below
-// Keep only the styles that override or extend Bootstrap
+// Custom variables
+$primary: SeaGreen;
+$body-bg: Honeydew;
+$rating-color: #f39c12;
 
-// Variables (only keep those that aren't covered by Bootstrap)
-$colors: (
-  accent: #e74c3c,
-  rating: #f39c12
+// Override Bootstrap variables
+$theme-colors: (
+  "primary": $primary
 );
 
-// Base Styles
+// Base styles
 body {
   font-family: 'Arial', sans-serif;
-  background-color: $gray-100; // Using Bootstrap's gray variable
-  color: $gray-800; // Using Bootstrap's gray variable
+  background-color: $body-bg;
+  color: $gray-800;
   line-height: 1.6;
 }
 
-// Main View
+// Main view container
 .main-view {
   padding: 2rem;
   max-width: 1400px;
@@ -32,7 +32,7 @@ body {
   }
 }
 
-// Movie Card (simplified using Bootstrap classes)
+// Movie card component
 .movie-card {
   transition: all 0.3s ease;
   cursor: pointer;
@@ -58,7 +58,7 @@ body {
   }
 }
 
-// Animations (keep if needed)
+// Animations
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -74,7 +74,7 @@ body {
   }
 }
 
-// Custom utility classes (only if Bootstrap doesn't provide them)
+// Utility classes
 .text-rating {
-  color: map.get($colors, rating);
+  color: $rating-color !important;
 }
