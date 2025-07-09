@@ -6,7 +6,7 @@ import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
 import { ProfileView } from "../profile-view/profile-view";
-import { NavigationBar } from "../navigation-bar/navigation-bar";  // Ensure this file exists
+import { NavigationBar } from "../navigation-bar/navigation-bar";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 
@@ -36,6 +36,32 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
     fetchMovies();
   }, [token]);
 
+  const handleToggleFavorite = async (movieId) => {
+    try {
+      const isFavorite = user.FavoriteMovies?.includes(movieId);
+      const method = isFavorite ? "DELETE" : "POST";
+      
+      const response = await fetch(
+        `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}/movies/${movieId}`,
+        {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
   function MovieViewWrapper() {
     const { movieId } = useParams();
     const movie = movies?.find((m) => m._id === movieId);
@@ -43,7 +69,13 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
     if (!movies) return <Col>Loading movies...</Col>;
     if (!movie) return <Col>Movie not found.</Col>;
 
-    return <MovieView movie={movie} user={user} token={token} />;
+    return (
+      <MovieView 
+        movie={movie} 
+        onFavorite={handleToggleFavorite}
+        isFavorite={user.FavoriteMovies?.includes(movie._id)}
+      />
+    );
   }
 
   const AuthenticatedLayout = ({ children }) => (
@@ -144,8 +176,8 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
                 <Col key={movie._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
                   <MovieCard 
                     movie={movie} 
-                    user={user} 
-                    token={token} 
+                    onFavorite={handleToggleFavorite}
+                    isFavorite={user.FavoriteMovies?.includes(movie._id)}
                   />
                 </Col>
               ))
