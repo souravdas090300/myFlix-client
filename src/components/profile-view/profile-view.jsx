@@ -22,6 +22,12 @@ export const ProfileView = ({
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    
+    if (!password) {
+      setError("Please enter your current password to confirm changes");
+      return;
+    }
+    
     setUpdating(true);
     setError("");
     setSuccess("");
@@ -43,12 +49,12 @@ export const ProfileView = ({
       );
       if (!response.ok) throw new Error("Update failed");
       const updatedUser = await response.json();
-      setSuccess("Profile updated!");
+      setSuccess("Profile updated successfully!");
       onUserUpdate(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setPassword("");
     } catch (err) {
-      setError("Could not update profile.");
+      setError(err.message || "Could not update profile.");
     } finally {
       setUpdating(false);
     }
@@ -100,14 +106,18 @@ export const ProfileView = ({
                 />
               </Form.Group>
               <Form.Group className="mb-3" controlId="formPassword">
-                <Form.Label>New Password</Form.Label>
+                <Form.Label>Password</Form.Label>
                 <Form.Control
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                   minLength={5}
-                  placeholder="Leave blank to keep current password"
+                  placeholder="Enter your current password if you don't want to change it"
                 />
+                <Form.Text className="text-muted">
+                  Enter your current password to confirm changes or set a new password
+                </Form.Text>
               </Form.Group>
               {error && <div className="text-danger mb-2">{error}</div>}
               {success && <div className="text-success mb-2">{success}</div>}
