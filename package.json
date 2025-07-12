@@ -36,8 +36,8 @@
     "run": "^1.5.0"
   },
   "devDependencies": {
-    "@parcel/transformer-sass": "^2.12.0",
-    "parcel": "^2.12.0",
+    "@parcel/transformer-sass": "^2.15.4",
+    "parcel": "^2.15.4",
     "postinstall-postinstall": "^2.1.0",
     "process": "^0.11.10",
     "sass": "^1.89.2"
