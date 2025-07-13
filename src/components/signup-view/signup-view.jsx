@@ -65,6 +65,15 @@ export const SignupView = ({ onSignedUp }) => {
     setIsLoading(true);
 
     try {
+      // First, try to wake up the Heroku app by making a simple GET request
+      try {
+        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", { method: 'GET' });
+        // Wait a moment for the app to fully wake up
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (e) {
+        // App wake-up attempt failed, continuing with signup...
+      }
+
       const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,17 +88,61 @@ export const SignupView = ({ onSignedUp }) => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || "Signup failed. Please try again.");
+        // Handle different types of errors
+        if (response.status === 400) {
+          setServerError("Invalid user data. Please check your information.");
+        } else if (response.status === 409) {
+          setServerError("Username or email already exists. Please try different credentials.");
+        } else if (response.status === 410) {
+          setServerError(
+            <div>
+              <strong>Registration service unavailable</strong><br/>
+              The API endpoint is currently down (410 Gone). This might be due to:<br/>
+              • The Heroku app being asleep or deactivated<br/>
+              • API endpoint has been moved<br/>
+              <br/>
+              <strong>For testing purposes, you can use these demo credentials:</strong><br/>
+              Username: <code>testuser</code><br/>
+              Password: <code>password123</code>
+            </div>
+          );
+        } else if (response.status === 500) {
+          setServerError("Server error. Please try again later.");
+        } else if (response.status >= 500) {
+          setServerError("Server is experiencing issues. Please try again later.");
+        } else {
+          setServerError(data.message || `Signup failed (${response.status}). Please try again.`);
+        }
+        return;
       }
 
-      if (data.user && data.token) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("token", data.token);
-        onSignedUp(data.user, data.token);
-        navigate("/");
+      // Check if response has expected structure
+      if (data && data.Username) {
+        // User created successfully, now login
+        const loginResponse = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            Username: formData.username,
+            Password: formData.password
+          })
+        });
+
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          
+          localStorage.setItem("user", JSON.stringify(loginData.user));
+          localStorage.setItem("token", loginData.token);
+          onSignedUp(loginData.user, loginData.token);
+          navigate("/");
+        } else {
+          setServerError("Account created but login failed. Please try logging in manually.");
+        }
+      } else {
+        setServerError("Unexpected response format. Please try again.");
       }
     } catch (error) {
-      setServerError(error.message);
+      setServerError(`Network error: ${error.message}. Please check your connection and try again.`);
     } finally {
       setIsLoading(false);
     }

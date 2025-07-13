@@ -22,12 +22,14 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
 
   // Filter movies based on search query
   const filteredMovies = movies.filter((movie) => {
+    if (!searchQuery) return true; // Show all movies if no search query
+    
     const query = searchQuery.toLowerCase();
-    return (
-      movie.Title.toLowerCase().includes(query) ||
-      movie.Genre?.Name.toLowerCase().includes(query) ||
-      movie.Director?.Name.toLowerCase().includes(query)
-    );
+    const titleMatch = movie.Title?.toLowerCase().includes(query);
+    const genreMatch = movie.Genre?.Name?.toLowerCase().includes(query);
+    const directorMatch = movie.Director?.Name?.toLowerCase().includes(query);
+    
+    return titleMatch || genreMatch || directorMatch;
   });
 
   useEffect(() => {

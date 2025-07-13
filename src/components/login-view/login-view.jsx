@@ -26,6 +26,14 @@ export const LoginView = ({ onLoggedIn }) => {
         Password: password
       };
 
+      // Try to wake up the Heroku app first
+      try {
+        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", { method: 'GET' });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (e) {
+        // App wake-up attempt failed, continuing with login...
+      }
+
       const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -34,15 +42,25 @@ export const LoginView = ({ onLoggedIn }) => {
 
       const result = await response.json();
       
-      if (result.user && result.token) {
+      if (response.ok && result.user && result.token) {
         localStorage.setItem("user", JSON.stringify(result.user));
         localStorage.setItem("token", result.token);
         onLoggedIn(result.user, result.token);
       } else {
-        setError(result.message || "Invalid username or password.");
+        if (response.status === 400) {
+          setError("Invalid username or password.");
+        } else if (response.status === 401) {
+          setError("Unauthorized. Please check your credentials.");
+        } else if (response.status === 410) {
+          setError("Login service is currently unavailable (410 Gone). The API may be down or moved.");
+        } else if (response.status >= 500) {
+          setError("Server is experiencing issues. Please try again later.");
+        } else {
+          setError(result.message || "Login failed. Please try again.");
+        }
       }
     } catch (error) {
-      setError("Something went wrong. Please try again.");
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
