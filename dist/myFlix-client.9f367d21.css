@@ -13278,4 +13278,25 @@ body {
 .text-rating {
   color: #f39c12 !important;
 }
+
+.movie-filter-input {
+  border-radius: .5rem;
+  padding: .8rem;
+  font-size: 1.1rem;
+}
+
+.movie-filter-input:focus {
+  border-color: #2e8b57;
+  box-shadow: 0 0 0 .2rem #20b2aa40;
+}
+
+.filter-container {
+  margin-bottom: 2rem;
+}
+
+.filter-container .input-group-text {
+  color: #fff;
+  background-color: #2e8b57;
+  border-color: #2e8b57;
+}
 /*# sourceMappingURL=myFlix-client.9f367d21.css.map */
