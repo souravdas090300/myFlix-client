@@ -78,3 +78,25 @@ body {
 .text-rating {
   color: $rating-color !important;
 }
+
+// Movie filter styles
+.movie-filter-input {
+  font-size: 1.1rem;
+  padding: 0.8rem;
+  border-radius: 0.5rem;
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 0.2rem rgba(32, 178, 170, 0.25);
+  }
+}
+
+.filter-container {
+  margin-bottom: 2rem;
+
+  .input-group-text {
+    background-color: $primary;
+    color: white;
+    border-color: $primary;
+  }
+}

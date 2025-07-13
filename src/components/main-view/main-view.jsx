@@ -9,6 +9,9 @@ import { ProfileView } from "../profile-view/profile-view";
 import { NavigationBar } from "../navigation-bar/navigation-bar";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
+import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
+import { FaSearch } from "react-icons/fa";
 
 export const MainView = ({ onUserUpdate, onUserDeregister }) => {
   const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -16,6 +19,8 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
   const [user, setUser] = useState(storedUser || null);
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
+  const [filteredMovies, setFilteredMovies] = useState([]);
+  const [filterQuery, setFilterQuery] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -28,6 +33,7 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
         if (!response.ok) throw new Error('Failed to fetch movies');
         const data = await response.json();
         setMovies(data);
+        setFilteredMovies(data);
       } catch (error) {
         console.error("Error fetching movies:", error);
       }
@@ -35,6 +41,20 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
 
     fetchMovies();
   }, [token]);
+
+  // Filter movies based on search query
+  useEffect(() => {
+    if (!filterQuery.trim()) {
+      setFilteredMovies(movies);
+    } else {
+      const filtered = movies.filter(movie =>
+        movie.Title.toLowerCase().includes(filterQuery.toLowerCase()) ||
+        movie.Genre.Name.toLowerCase().includes(filterQuery.toLowerCase()) ||
+        movie.Director.Name.toLowerCase().includes(filterQuery.toLowerCase())
+      );
+      setFilteredMovies(filtered);
+    }
+  }, [filterQuery, movies]);
 
   const handleToggleFavorite = async (movieId) => {
     try {
@@ -167,12 +187,27 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
         path="/"
         element={
           <AuthenticatedLayout>
-            {!movies ? (
+            <Row className="mb-4">
+              <Col>
+                <InputGroup>
+                  <Form.Control
+                    type="text"
+                    placeholder="Search by title, genre, or director..."
+                    value={filterQuery}
+                    onChange={(e) => setFilterQuery(e.target.value)}
+                  />
+                  <InputGroup.Text>
+                    <FaSearch />
+                  </InputGroup.Text>
+                </InputGroup>
+              </Col>
+            </Row>
+            {!filteredMovies ? (
               <Col>Loading movies...</Col>
-            ) : movies.length === 0 ? (
+            ) : filteredMovies.length === 0 ? (
               <Col>No movies found.</Col>
             ) : (
-              movies.map((movie) => (
+              filteredMovies.map((movie) => (
                 <Col key={movie._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
                   <MovieCard 
                     movie={movie} 

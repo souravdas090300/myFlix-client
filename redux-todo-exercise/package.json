@@ -1,0 +1,17 @@
+{
+  "name": "redux-todo-exercise",
+  "version": "1.0.0",
+  "description": "Redux To-Do exercise following Exercise 3.8",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "redux": "^5.0.1"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
