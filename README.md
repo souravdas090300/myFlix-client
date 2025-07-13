@@ -25,8 +25,6 @@ A modern React-based movie application that provides a comprehensive movie brows
 - **HTTP Client**: Fetch API for REST API communication
 - **Package Manager**: npm
 
-## Getting Started
-
 ## 🚀 Getting Started
 
 ### Prerequisites
