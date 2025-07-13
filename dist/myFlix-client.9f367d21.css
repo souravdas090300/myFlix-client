@@ -13279,24 +13279,27 @@ body {
   color: #f39c12 !important;
 }
 
-.movie-filter-input {
-  border-radius: .5rem;
-  padding: .8rem;
+.search-input {
+  border: 2px solid #dee2e6;
+  border-radius: 25px;
+  padding: 12px 20px;
   font-size: 1.1rem;
+  transition: all .3s;
+  box-shadow: 0 2px 4px #0000001a;
 }
 
-.movie-filter-input:focus {
+.search-input:focus {
   border-color: #2e8b57;
-  box-shadow: 0 0 0 .2rem #20b2aa40;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px #00000026;
 }
 
-.filter-container {
-  margin-bottom: 2rem;
+.search-input::placeholder {
+  color: #6c757d;
+  font-style: italic;
 }
 
-.filter-container .input-group-text {
-  color: #fff;
-  background-color: #2e8b57;
-  border-color: #2e8b57;
+.spinner-border {
+  color: #2e8b57;
 }
 /*# sourceMappingURL=myFlix-client.9f367d21.css.map */
