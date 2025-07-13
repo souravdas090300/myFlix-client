@@ -78,3 +78,29 @@ body {
 .text-rating {
   color: $rating-color !important;
 }
+
+// Search Input Styling
+.search-input {
+  border-radius: 25px;
+  padding: 12px 20px;
+  border: 2px solid $border-color;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+
+  &::placeholder {
+    color: #6c757d;
+    font-style: italic;
+  }
+}
+
+// Loading spinner styles
+.spinner-border {
+  color: $primary;
+}

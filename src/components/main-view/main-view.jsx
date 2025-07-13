@@ -9,6 +9,8 @@ import { ProfileView } from "../profile-view/profile-view";
 import { NavigationBar } from "../navigation-bar/navigation-bar";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
+import Container from "react-bootstrap/Container";
+import Form from "react-bootstrap/Form";
 
 export const MainView = ({ onUserUpdate, onUserDeregister }) => {
   const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -16,6 +18,17 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
   const [user, setUser] = useState(storedUser || null);
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter movies based on search query
+  const filteredMovies = movies.filter((movie) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      movie.Title.toLowerCase().includes(query) ||
+      movie.Genre?.Name.toLowerCase().includes(query) ||
+      movie.Director?.Name.toLowerCase().includes(query)
+    );
+  });
 
   useEffect(() => {
     if (!token) return;
@@ -88,9 +101,11 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
           localStorage.clear();
         }}
       />
-      <Row className="justify-content-md-center mt-4">
-        {children}
-      </Row>
+      <Container>
+        <Row className="justify-content-md-center mt-4">
+          {children}
+        </Row>
+      </Container>
     </>
   );
 
@@ -167,21 +182,54 @@ export const MainView = ({ onUserUpdate, onUserDeregister }) => {
         path="/"
         element={
           <AuthenticatedLayout>
-            {!movies ? (
-              <Col>Loading movies...</Col>
-            ) : movies.length === 0 ? (
-              <Col>No movies found.</Col>
-            ) : (
-              movies.map((movie) => (
-                <Col key={movie._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
-                  <MovieCard 
-                    movie={movie} 
-                    onFavorite={handleToggleFavorite}
-                    isFavorite={user.FavoriteMovies?.includes(movie._id)}
-                  />
+            <Container>
+              <Row className="justify-content-center mb-4">
+                <Col xs={12} md={8} lg={6}>
+                  <Form.Group>
+                    <Form.Control
+                      type="text"
+                      placeholder="Search movies by title, genre, or director..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="search-input"
+                      size="lg"
+                    />
+                  </Form.Group>
                 </Col>
-              ))
-            )}
+              </Row>
+              <Row>
+                {!movies ? (
+                  <Col className="text-center">
+                    <div className="spinner-border" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Loading movies...</p>
+                  </Col>
+                ) : filteredMovies.length === 0 ? (
+                  <Col className="text-center">
+                    <h4>
+                      {searchQuery 
+                        ? `No movies found for "${searchQuery}"` 
+                        : "No movies available"
+                      }
+                    </h4>
+                    {searchQuery && (
+                      <p className="text-muted">Try adjusting your search terms</p>
+                    )}
+                  </Col>
+                ) : (
+                  filteredMovies.map((movie) => (
+                    <Col key={movie._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
+                      <MovieCard 
+                        movie={movie} 
+                        onFavorite={handleToggleFavorite}
+                        isFavorite={user.FavoriteMovies?.includes(movie._id)}
+                      />
+                    </Col>
+                  ))
+                )}
+              </Row>
+            </Container>
           </AuthenticatedLayout>
         }
       />
