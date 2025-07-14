@@ -111,6 +111,7 @@ This application connects to the myFlix REST API for:
 - User profile operations
 
 **API Repository**: [myFlix API](https://github.com/souravdas090300/myFlix-client)
+Api hosting URL: [netlify] (https://my-flix-clients.netlify.app/)
 
 ## 🌟 Key Features Implementation
 
