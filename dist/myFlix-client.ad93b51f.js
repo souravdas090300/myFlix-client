@@ -32263,26 +32263,16 @@ const MainView = ()=>{
     const [token, setToken] = (0, _react.useState)(storedToken || null);
     const [movies, setMovies] = (0, _react.useState)([]);
     const [searchQuery, setSearchQuery] = (0, _react.useState)("");
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = (0, _react.useState)("");
-    const [filter, setFilter] = (0, _react.useState)("all");
+    const [filter, setFilter] = (0, _react.useState)("all"); // 'all' or 'favorites'
+    const [isSearching, setIsSearching] = (0, _react.useState)(false);
     const [isLoading, setIsLoading] = (0, _react.useState)(false);
     const [error, setError] = (0, _react.useState)("");
-    // Debounce search input
-    (0, _react.useEffect)(()=>{
-        const timerId = setTimeout(()=>{
-            setDebouncedSearchQuery(searchQuery);
-        }, 300);
-        return ()=>{
-            clearTimeout(timerId);
-        };
-    }, [
-        searchQuery
-    ]);
-    // Filter and search logic
+    // Filter and search logic - simplified without memoization
     const getDisplayMovies = ()=>{
         let moviesToDisplay = movies;
-        if (debouncedSearchQuery && debouncedSearchQuery.trim() !== "") {
-            const query = debouncedSearchQuery.toLowerCase();
+        // Apply search filter if there's a search query
+        if (searchQuery && searchQuery.trim() !== "") {
+            const query = searchQuery.toLowerCase();
             moviesToDisplay = movies.filter((movie)=>{
                 const titleMatch = movie.Title?.toLowerCase().includes(query);
                 const genreMatch = movie.Genre?.Name?.toLowerCase().includes(query);
@@ -32290,10 +32280,12 @@ const MainView = ()=>{
                 return titleMatch || genreMatch || directorMatch;
             });
         }
+        // Apply favorites filter
         if (filter === "favorites") moviesToDisplay = moviesToDisplay.filter((movie)=>user?.FavoriteMovies?.includes(movie._id));
         return moviesToDisplay;
     };
     const displayMovies = getDisplayMovies();
+    // Retry function for failed movie fetching
     const retryFetchMovies = async ()=>{
         if (!token) return;
         setIsLoading(true);
@@ -32305,9 +32297,10 @@ const MainView = ()=>{
                     method: "GET",
                     mode: "no-cors"
                 });
+                // Wait a moment for the app to wake up
                 await new Promise((resolve)=>setTimeout(resolve, 2000));
             } catch (wakeUpError) {
-                console.log("Wake-up request failed");
+            // Wake-up request failed, but continue with the main request
             }
             const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies", {
                 headers: {
@@ -32315,7 +32308,7 @@ const MainView = ()=>{
                 }
             });
             if (!response.ok) {
-                if (response.status === 410) throw new Error("The movie database is temporarily unavailable. Please try again in a few moments.");
+                if (response.status === 410) throw new Error("The movie database is temporarily unavailable. The server may be sleeping. Please try again in a few moments.");
                 else if (response.status === 401) throw new Error("Authentication failed. Please log in again.");
                 else throw new Error(`Failed to fetch movies (${response.status})`);
             }
@@ -32323,14 +32316,17 @@ const MainView = ()=>{
             setMovies(data);
             setError("");
         } catch (error) {
-            setError(error.message || "Unable to load movies. Please try again later.");
+            if (error.name === "TypeError" && error.message.includes("fetch")) setError("Network error. Please check your internet connection and try again.");
+            else setError(error.message || "Unable to load movies. Please try again later.");
         } finally{
             setIsLoading(false);
         }
     };
+    // Simple search handler without any complex logic
     const handleSearchChange = (value)=>{
         setSearchQuery(value);
     };
+    // Stable filter handlers
     const handleShowAllMovies = ()=>{
         setFilter("all");
     };
@@ -32339,7 +32335,42 @@ const MainView = ()=>{
     };
     (0, _react.useEffect)(()=>{
         if (!token) return;
-        retryFetchMovies();
+        const fetchMovies = async ()=>{
+            setIsLoading(true);
+            setError("");
+            try {
+                // Try to wake up the Heroku app first
+                try {
+                    await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
+                        method: "GET",
+                        mode: "no-cors"
+                    });
+                    // Wait a moment for the app to wake up
+                    await new Promise((resolve)=>setTimeout(resolve, 2000));
+                } catch (wakeUpError) {
+                // Wake-up request failed, but continue with the main request
+                }
+                const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies", {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                if (!response.ok) {
+                    if (response.status === 410) throw new Error("The movie database is temporarily unavailable. The server may be sleeping. Please try again in a few moments.");
+                    else if (response.status === 401) throw new Error("Authentication failed. Please log in again.");
+                    else throw new Error(`Failed to fetch movies (${response.status})`);
+                }
+                const data = await response.json();
+                setMovies(data);
+                setError("");
+            } catch (error) {
+                if (error.name === "TypeError" && error.message.includes("fetch")) setError("Network error. Please check your internet connection and try again.");
+                else setError(error.message || "Unable to load movies. Please try again later.");
+            } finally{
+                setIsLoading(false);
+            }
+        };
+        fetchMovies();
     }, [
         token
     ]);
@@ -32360,7 +32391,7 @@ const MainView = ()=>{
                 localStorage.setItem("user", JSON.stringify(updatedUser));
             }
         } catch (error) {
-            console.error("Error toggling favorite:", error);
+        // Error toggling favorite - silently fail
         }
     };
     function MovieViewWrapper() {
@@ -32371,14 +32402,14 @@ const MainView = ()=>{
             children: "Loading movies..."
         }, void 0, false, {
             fileName: "src/components/main-view/main-view.jsx",
-            lineNumber: 160,
+            lineNumber: 214,
             columnNumber: 25
         }, this);
         if (!movie) return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
             children: "Movie not found."
         }, void 0, false, {
             fileName: "src/components/main-view/main-view.jsx",
-            lineNumber: 161,
+            lineNumber: 215,
             columnNumber: 24
         }, this);
         return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _movieView.MovieView), {
@@ -32387,7 +32418,7 @@ const MainView = ()=>{
             isFavorite: user.FavoriteMovies?.includes(movie._id)
         }, void 0, false, {
             fileName: "src/components/main-view/main-view.jsx",
-            lineNumber: 164,
+            lineNumber: 218,
             columnNumber: 7
         }, this);
     }
@@ -32407,7 +32438,7 @@ const MainView = ()=>{
                     }
                 }, void 0, false, {
                     fileName: "src/components/main-view/main-view.jsx",
-                    lineNumber: 174,
+                    lineNumber: 228,
                     columnNumber: 7
                 }, undefined),
                 /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _containerDefault.default), {
@@ -32416,12 +32447,12 @@ const MainView = ()=>{
                         children: children
                     }, void 0, false, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 183,
+                        lineNumber: 237,
                         columnNumber: 9
                     }, undefined)
                 }, void 0, false, {
                     fileName: "src/components/main-view/main-view.jsx",
-                    lineNumber: 182,
+                    lineNumber: 236,
                     columnNumber: 7
                 }, undefined)
             ]
@@ -32444,12 +32475,12 @@ const MainView = ()=>{
                             }
                         }, void 0, false, {
                             fileName: "src/components/main-view/main-view.jsx",
-                            lineNumber: 196,
+                            lineNumber: 250,
                             columnNumber: 17
                         }, void 0)
                     }, void 0, false, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 193,
+                        lineNumber: 247,
                         columnNumber: 13
                     }, undefined),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactRouterDom.Route), {
@@ -32463,12 +32494,12 @@ const MainView = ()=>{
                             }
                         }, void 0, false, {
                             fileName: "src/components/main-view/main-view.jsx",
-                            lineNumber: 209,
+                            lineNumber: 263,
                             columnNumber: 17
                         }, void 0)
                     }, void 0, false, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 206,
+                        lineNumber: 260,
                         columnNumber: 13
                     }, undefined),
                     /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactRouterDom.Route), {
@@ -32478,28 +32509,28 @@ const MainView = ()=>{
                             replace: true
                         }, void 0, false, {
                             fileName: "src/components/main-view/main-view.jsx",
-                            lineNumber: 219,
+                            lineNumber: 273,
                             columnNumber: 38
                         }, void 0)
                     }, void 0, false, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 219,
+                        lineNumber: 273,
                         columnNumber: 13
                     }, undefined)
                 ]
             }, void 0, true, {
                 fileName: "src/components/main-view/main-view.jsx",
-                lineNumber: 192,
+                lineNumber: 246,
                 columnNumber: 11
             }, undefined)
         }, void 0, false, {
             fileName: "src/components/main-view/main-view.jsx",
-            lineNumber: 191,
+            lineNumber: 245,
             columnNumber: 9
         }, undefined)
     }, void 0, false, {
         fileName: "src/components/main-view/main-view.jsx",
-        lineNumber: 190,
+        lineNumber: 244,
         columnNumber: 7
     }, undefined);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactRouterDom.Routes), {
@@ -32522,17 +32553,17 @@ const MainView = ()=>{
                         }
                     }, void 0, false, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 232,
+                        lineNumber: 286,
                         columnNumber: 13
                     }, void 0)
                 }, void 0, false, {
                     fileName: "src/components/main-view/main-view.jsx",
-                    lineNumber: 231,
+                    lineNumber: 285,
                     columnNumber: 11
                 }, void 0)
             }, void 0, false, {
                 fileName: "src/components/main-view/main-view.jsx",
-                lineNumber: 228,
+                lineNumber: 282,
                 columnNumber: 7
             }, undefined),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactRouterDom.Route), {
@@ -32540,17 +32571,17 @@ const MainView = ()=>{
                 element: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)(AuthenticatedLayout, {
                     children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)(MovieViewWrapper, {}, void 0, false, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 253,
+                        lineNumber: 307,
                         columnNumber: 13
                     }, void 0)
                 }, void 0, false, {
                     fileName: "src/components/main-view/main-view.jsx",
-                    lineNumber: 252,
+                    lineNumber: 306,
                     columnNumber: 11
                 }, void 0)
             }, void 0, false, {
                 fileName: "src/components/main-view/main-view.jsx",
-                lineNumber: 249,
+                lineNumber: 303,
                 columnNumber: 7
             }, undefined),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactRouterDom.Route), {
@@ -32558,44 +32589,30 @@ const MainView = ()=>{
                 element: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)(AuthenticatedLayout, {
                     children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _containerDefault.default), {
                         children: [
-                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _rowDefault.default), {
-                                className: "justify-content-center mb-4",
-                                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
-                                    xs: 12,
-                                    md: 8,
-                                    lg: 6,
-                                    children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _searchBar.SearchBar), {
-                                        initialSearchQuery: searchQuery,
-                                        onSearchChange: handleSearchChange
-                                    }, "search-bar", false, {
-                                        fileName: "src/components/main-view/main-view.jsx",
-                                        lineNumber: 264,
-                                        columnNumber: 19
-                                    }, void 0)
-                                }, void 0, false, {
-                                    fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 263,
-                                    columnNumber: 17
-                                }, void 0)
+                            /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _searchBar.SearchBar), {
+                                initialSearchQuery: searchQuery,
+                                onSearchChange: handleSearchChange
                             }, void 0, false, {
                                 fileName: "src/components/main-view/main-view.jsx",
-                                lineNumber: 262,
+                                lineNumber: 316,
                                 columnNumber: 15
                             }, void 0),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _rowDefault.default), {
                                 className: "justify-content-center mb-3",
                                 children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
                                     xs: 12,
+                                    md: 8,
+                                    lg: 6,
                                     className: "text-center",
                                     children: [
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _buttonDefault.default), {
                                             variant: filter === "all" ? "primary" : "outline-primary",
                                             onClick: handleShowAllMovies,
-                                            className: "me-2 mb-2 mb-sm-0",
+                                            className: "me-2",
                                             children: "All Movies"
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 274,
+                                            lineNumber: 324,
                                             columnNumber: 19
                                         }, void 0),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _buttonDefault.default), {
@@ -32604,18 +32621,18 @@ const MainView = ()=>{
                                             children: "My Favorites"
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 281,
+                                            lineNumber: 331,
                                             columnNumber: 19
                                         }, void 0)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 273,
+                                    lineNumber: 323,
                                     columnNumber: 17
                                 }, void 0)
                             }, void 0, false, {
                                 fileName: "src/components/main-view/main-view.jsx",
-                                lineNumber: 272,
+                                lineNumber: 322,
                                 columnNumber: 15
                             }, void 0),
                             error && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _rowDefault.default), {
@@ -32629,17 +32646,17 @@ const MainView = ()=>{
                                         className: "text-center",
                                         children: [
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _alertDefault.default).Heading, {
-                                                children: "Error"
+                                                children: "Connection Error"
                                             }, void 0, false, {
                                                 fileName: "src/components/main-view/main-view.jsx",
-                                                lineNumber: 296,
+                                                lineNumber: 346,
                                                 columnNumber: 23
                                             }, void 0),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                                 children: error
                                             }, void 0, false, {
                                                 fileName: "src/components/main-view/main-view.jsx",
-                                                lineNumber: 297,
+                                                lineNumber: 347,
                                                 columnNumber: 23
                                             }, void 0),
                                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _buttonDefault.default), {
@@ -32649,23 +32666,23 @@ const MainView = ()=>{
                                                 children: isLoading ? "Retrying..." : "Try Again"
                                             }, void 0, false, {
                                                 fileName: "src/components/main-view/main-view.jsx",
-                                                lineNumber: 298,
+                                                lineNumber: 348,
                                                 columnNumber: 23
                                             }, void 0)
                                         ]
                                     }, void 0, true, {
                                         fileName: "src/components/main-view/main-view.jsx",
-                                        lineNumber: 295,
+                                        lineNumber: 345,
                                         columnNumber: 21
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 294,
+                                    lineNumber: 344,
                                     columnNumber: 19
                                 }, void 0)
                             }, void 0, false, {
                                 fileName: "src/components/main-view/main-view.jsx",
-                                lineNumber: 293,
+                                lineNumber: 343,
                                 columnNumber: 17
                             }, void 0),
                             displayMovies.length > 0 && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _rowDefault.default), {
@@ -32677,21 +32694,21 @@ const MainView = ()=>{
                                         "Showing ",
                                         filter === "favorites" ? "favorite" : "all",
                                         " movies",
-                                        debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`
+                                        searchQuery && ` matching "${searchQuery}"`
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 312,
+                                    lineNumber: 363,
                                     columnNumber: 19
                                 }, void 0)
                             }, void 0, false, {
                                 fileName: "src/components/main-view/main-view.jsx",
-                                lineNumber: 311,
+                                lineNumber: 362,
                                 columnNumber: 17
                             }, void 0),
                             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _rowDefault.default), {
                                 children: isLoading ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
-                                    className: "text-center my-5",
+                                    className: "text-center",
                                     children: [
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
                                             className: "spinner-border",
@@ -32701,26 +32718,58 @@ const MainView = ()=>{
                                                 children: "Loading..."
                                             }, void 0, false, {
                                                 fileName: "src/components/main-view/main-view.jsx",
-                                                lineNumber: 323,
+                                                lineNumber: 374,
                                                 columnNumber: 23
                                             }, void 0)
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 322,
+                                            lineNumber: 373,
                                             columnNumber: 21
                                         }, void 0),
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                             className: "mt-2",
-                                            children: "Loading movies..."
+                                            children: isSearching ? "Searching movies..." : "Loading movies..."
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 325,
+                                            lineNumber: 376,
                                             columnNumber: 21
                                         }, void 0)
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 321,
+                                    lineNumber: 372,
+                                    columnNumber: 19
+                                }, void 0) : !movies && !error || isSearching ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
+                                    className: "text-center",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                                            className: "spinner-border",
+                                            role: "status",
+                                            children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("span", {
+                                                className: "visually-hidden",
+                                                children: "Loading..."
+                                            }, void 0, false, {
+                                                fileName: "src/components/main-view/main-view.jsx",
+                                                lineNumber: 383,
+                                                columnNumber: 23
+                                            }, void 0)
+                                        }, void 0, false, {
+                                            fileName: "src/components/main-view/main-view.jsx",
+                                            lineNumber: 382,
+                                            columnNumber: 21
+                                        }, void 0),
+                                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                            className: "mt-2",
+                                            children: isSearching ? "Searching movies..." : "Loading movies..."
+                                        }, void 0, false, {
+                                            fileName: "src/components/main-view/main-view.jsx",
+                                            lineNumber: 385,
+                                            columnNumber: 21
+                                        }, void 0)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "src/components/main-view/main-view.jsx",
+                                    lineNumber: 381,
                                     columnNumber: 19
                                 }, void 0) : error ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
                                     className: "text-center",
@@ -32729,82 +32778,82 @@ const MainView = ()=>{
                                         children: 'Please use the "Try Again" button above to reload movies.'
                                     }, void 0, false, {
                                         fileName: "src/components/main-view/main-view.jsx",
-                                        lineNumber: 329,
+                                        lineNumber: 391,
                                         columnNumber: 21
                                     }, void 0)
                                 }, void 0, false, {
                                     fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 328,
+                                    lineNumber: 390,
                                     columnNumber: 19
                                 }, void 0) : displayMovies.length === 0 ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
-                                    className: "text-center my-5",
+                                    className: "text-center",
                                     children: [
                                         /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("h4", {
-                                            children: debouncedSearchQuery ? `No movies found for "${debouncedSearchQuery}"` : filter === "favorites" ? "You haven't marked any favorites yet" : "No movies available"
+                                            children: searchQuery ? `No movies found for "${searchQuery}"` : filter === "favorites" ? "You haven't marked any favorites yet" : "No movies available"
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 335,
+                                            lineNumber: 397,
                                             columnNumber: 21
                                         }, void 0),
-                                        debouncedSearchQuery ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
+                                        searchQuery ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                             className: "text-muted",
                                             children: "Try adjusting your search terms"
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 343,
+                                            lineNumber: 405,
                                             columnNumber: 23
                                         }, void 0) : filter === "favorites" ? /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("p", {
                                             className: "text-muted",
                                             children: "Click the heart icon on movies to add them to favorites"
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 345,
+                                            lineNumber: 407,
                                             columnNumber: 23
                                         }, void 0) : null
                                     ]
                                 }, void 0, true, {
                                     fileName: "src/components/main-view/main-view.jsx",
-                                    lineNumber: 334,
+                                    lineNumber: 396,
                                     columnNumber: 19
                                 }, void 0) : displayMovies.map((movie)=>/*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
                                         xs: 12,
                                         sm: 6,
                                         md: 4,
                                         lg: 3,
-                                        className: "mb-4 d-flex",
+                                        className: "mb-4",
                                         children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _movieCard.MovieCard), {
                                             movie: movie,
                                             onFavorite: handleToggleFavorite,
                                             isFavorite: user.FavoriteMovies?.includes(movie._id)
                                         }, void 0, false, {
                                             fileName: "src/components/main-view/main-view.jsx",
-                                            lineNumber: 360,
+                                            lineNumber: 422,
                                             columnNumber: 23
                                         }, void 0)
                                     }, movie._id, false, {
                                         fileName: "src/components/main-view/main-view.jsx",
-                                        lineNumber: 352,
+                                        lineNumber: 414,
                                         columnNumber: 21
                                     }, void 0))
                             }, void 0, false, {
                                 fileName: "src/components/main-view/main-view.jsx",
-                                lineNumber: 319,
+                                lineNumber: 370,
                                 columnNumber: 15
                             }, void 0)
                         ]
                     }, void 0, true, {
                         fileName: "src/components/main-view/main-view.jsx",
-                        lineNumber: 261,
+                        lineNumber: 315,
                         columnNumber: 13
                     }, void 0)
                 }, void 0, false, {
                     fileName: "src/components/main-view/main-view.jsx",
-                    lineNumber: 260,
+                    lineNumber: 314,
                     columnNumber: 11
                 }, void 0)
             }, void 0, false, {
                 fileName: "src/components/main-view/main-view.jsx",
-                lineNumber: 257,
+                lineNumber: 311,
                 columnNumber: 7
             }, undefined),
             /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _reactRouterDom.Route), {
@@ -32814,22 +32863,22 @@ const MainView = ()=>{
                     replace: true
                 }, void 0, false, {
                     fileName: "src/components/main-view/main-view.jsx",
-                    lineNumber: 373,
+                    lineNumber: 435,
                     columnNumber: 32
                 }, void 0)
             }, void 0, false, {
                 fileName: "src/components/main-view/main-view.jsx",
-                lineNumber: 373,
+                lineNumber: 435,
                 columnNumber: 7
             }, undefined)
         ]
     }, void 0, true, {
         fileName: "src/components/main-view/main-view.jsx",
-        lineNumber: 227,
+        lineNumber: 281,
         columnNumber: 5
     }, undefined);
 };
-_s(MainView, "gijapFnswS+52LAtYuPfpdOhay8=");
+_s(MainView, "dCb5AJEti/O4sBCbZ/XriWQadnA=");
 _c = MainView;
 MainView.propTypes = {
     onUserUpdate: (0, _propTypesDefault.default).func,
@@ -44344,6 +44393,12 @@ const SearchBar = ({ initialSearchQuery = "", onSearchChange })=>{
     }, [
         onSearchChange
     ]);
+    const handleClear = (0, _react.useCallback)(()=>{
+        setLocalSearchQuery("");
+        onSearchChange("");
+    }, [
+        onSearchChange
+    ]);
     return /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _rowDefault.default), {
         className: "justify-content-center mb-4",
         children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _colDefault.default), {
@@ -44351,36 +44406,60 @@ const SearchBar = ({ initialSearchQuery = "", onSearchChange })=>{
             md: 8,
             lg: 6,
             children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _formDefault.default).Group, {
-                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _formDefault.default).Control, {
-                    type: "text",
-                    value: localSearchQuery,
-                    onChange: handleChange,
-                    placeholder: "Search movies by title, genre, or director...",
-                    className: "search-input",
-                    size: "lg",
-                    autoComplete: "off"
-                }, void 0, false, {
+                children: /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("div", {
+                    className: "position-relative",
+                    children: [
+                        /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)((0, _formDefault.default).Control, {
+                            type: "text",
+                            value: localSearchQuery,
+                            onChange: handleChange,
+                            placeholder: "Search movies by title, genre, or director...",
+                            className: "search-input",
+                            size: "lg",
+                            autoComplete: "off"
+                        }, void 0, false, {
+                            fileName: "src/components/search-bar/search-bar.jsx",
+                            lineNumber: 25,
+                            columnNumber: 13
+                        }, undefined),
+                        localSearchQuery && /*#__PURE__*/ (0, _jsxDevRuntime.jsxDEV)("button", {
+                            type: "button",
+                            className: "btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3",
+                            onClick: handleClear,
+                            style: {
+                                border: 'none',
+                                background: 'none',
+                                color: '#6c757d'
+                            },
+                            children: "\xd7"
+                        }, void 0, false, {
+                            fileName: "src/components/search-bar/search-bar.jsx",
+                            lineNumber: 35,
+                            columnNumber: 15
+                        }, undefined)
+                    ]
+                }, void 0, true, {
                     fileName: "src/components/search-bar/search-bar.jsx",
-                    lineNumber: 19,
+                    lineNumber: 24,
                     columnNumber: 11
                 }, undefined)
             }, void 0, false, {
                 fileName: "src/components/search-bar/search-bar.jsx",
-                lineNumber: 18,
+                lineNumber: 23,
                 columnNumber: 9
             }, undefined)
         }, void 0, false, {
             fileName: "src/components/search-bar/search-bar.jsx",
-            lineNumber: 17,
+            lineNumber: 22,
             columnNumber: 7
         }, undefined)
     }, void 0, false, {
         fileName: "src/components/search-bar/search-bar.jsx",
-        lineNumber: 16,
+        lineNumber: 21,
         columnNumber: 5
     }, undefined);
 };
-_s(SearchBar, "yk8dNuJjun0sjhnH8Ro/ezYV7CM=");
+_s(SearchBar, "GUDSLG214rQp3PAavZ+nOsw2miA=");
 _c = SearchBar;
 SearchBar.displayName = "SearchBar";
 var _c;
