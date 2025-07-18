@@ -22,18 +22,28 @@ export const MainView = () => {
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all"); // 'all' or 'favorites'
-  const [isSearching, setIsSearching] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Filter and search logic - simplified without memoization
+  // Debounce search input
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [searchQuery]);
+
+  // Filter and search logic
   const getDisplayMovies = () => {
     let moviesToDisplay = movies;
     
-    // Apply search filter if there's a search query
-    if (searchQuery && searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearchQuery && debouncedSearchQuery.trim() !== "") {
+      const query = debouncedSearchQuery.toLowerCase();
       moviesToDisplay = movies.filter((movie) => {
         const titleMatch = movie.Title?.toLowerCase().includes(query);
         const genreMatch = movie.Genre?.Name?.toLowerCase().includes(query);
@@ -42,7 +52,6 @@ export const MainView = () => {
       });
     }
     
-    // Apply favorites filter
     if (filter === "favorites") {
       moviesToDisplay = moviesToDisplay.filter((movie) =>
         user?.FavoriteMovies?.includes(movie._id)
@@ -54,7 +63,6 @@ export const MainView = () => {
 
   const displayMovies = getDisplayMovies();
 
-  // Retry function for failed movie fetching
   const retryFetchMovies = async () => {
     if (!token) return;
 
@@ -68,10 +76,9 @@ export const MainView = () => {
           method: "GET",
           mode: "no-cors",
         });
-        // Wait a moment for the app to wake up
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (wakeUpError) {
-        // Wake-up request failed, but continue with the main request
+        console.log("Wake-up request failed");
       }
 
       const response = await fetch(
@@ -84,7 +91,7 @@ export const MainView = () => {
       if (!response.ok) {
         if (response.status === 410) {
           throw new Error(
-            "The movie database is temporarily unavailable. The server may be sleeping. Please try again in a few moments."
+            "The movie database is temporarily unavailable. Please try again in a few moments."
           );
         } else if (response.status === 401) {
           throw new Error("Authentication failed. Please log in again.");
@@ -97,24 +104,16 @@ export const MainView = () => {
       setMovies(data);
       setError("");
     } catch (error) {
-      if (error.name === "TypeError" && error.message.includes("fetch")) {
-        setError(
-          "Network error. Please check your internet connection and try again."
-        );
-      } else {
-        setError(error.message || "Unable to load movies. Please try again later.");
-      }
+      setError(error.message || "Unable to load movies. Please try again later.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Simple search handler without any complex logic
   const handleSearchChange = (value) => {
     setSearchQuery(value);
   };
 
-  // Stable filter handlers
   const handleShowAllMovies = () => {
     setFilter("all");
   };
@@ -125,60 +124,7 @@ export const MainView = () => {
 
   useEffect(() => {
     if (!token) return;
-
-    const fetchMovies = async () => {
-      setIsLoading(true);
-      setError("");
-
-      try {
-        // Try to wake up the Heroku app first
-        try {
-          await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
-            method: "GET",
-            mode: "no-cors",
-          });
-          // Wait a moment for the app to wake up
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        } catch (wakeUpError) {
-          // Wake-up request failed, but continue with the main request
-        }
-
-        const response = await fetch(
-          "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!response.ok) {
-          if (response.status === 410) {
-            throw new Error(
-              "The movie database is temporarily unavailable. The server may be sleeping. Please try again in a few moments."
-            );
-          } else if (response.status === 401) {
-            throw new Error("Authentication failed. Please log in again.");
-          } else {
-            throw new Error(`Failed to fetch movies (${response.status})`);
-          }
-        }
-
-        const data = await response.json();
-        setMovies(data);
-        setError("");
-      } catch (error) {
-        if (error.name === "TypeError" && error.message.includes("fetch")) {
-          setError(
-            "Network error. Please check your internet connection and try again."
-          );
-        } else {
-          setError(error.message || "Unable to load movies. Please try again later.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMovies();
+    retryFetchMovies();
   }, [token]);
 
   const handleToggleFavorite = async (movieId) => {
@@ -203,7 +149,7 @@ export const MainView = () => {
         localStorage.setItem("user", JSON.stringify(updatedUser));
       }
     } catch (error) {
-      // Error toggling favorite - silently fail
+      console.error("Error toggling favorite:", error);
     }
   };
 
@@ -313,18 +259,22 @@ export const MainView = () => {
         element={
           <AuthenticatedLayout>
             <Container>
-              <SearchBar
-                initialSearchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-              />
+              <Row className="justify-content-center mb-4">
+                <Col xs={12} md={8} lg={6}>
+                  <SearchBar
+                    key="search-bar"
+                    initialSearchQuery={searchQuery}
+                    onSearchChange={handleSearchChange}
+                  />
+                </Col>
+              </Row>
 
-              {/* Filter Controls */}
               <Row className="justify-content-center mb-3">
-                <Col xs={12} md={8} lg={6} className="text-center">
+                <Col xs={12} className="text-center">
                   <Button
                     variant={filter === "all" ? "primary" : "outline-primary"}
                     onClick={handleShowAllMovies}
-                    className="me-2"
+                    className="me-2 mb-2 mb-sm-0"
                   >
                     All Movies
                   </Button>
@@ -343,7 +293,7 @@ export const MainView = () => {
                 <Row className="justify-content-center mb-4">
                   <Col xs={12} md={8} lg={6}>
                     <Alert variant="danger" className="text-center">
-                      <Alert.Heading>Connection Error</Alert.Heading>
+                      <Alert.Heading>Error</Alert.Heading>
                       <p>{error}</p>
                       <Button
                         variant="outline-danger"
@@ -357,34 +307,22 @@ export const MainView = () => {
                 </Row>
               )}
 
-              {/* Filter Indicator */}
               {displayMovies.length > 0 && (
                 <Row className="justify-content-center mb-2">
                   <Col xs={12} className="text-center text-muted small">
                     Showing {filter === "favorites" ? "favorite" : "all"} movies
-                    {searchQuery && ` matching "${searchQuery}"`}
+                    {debouncedSearchQuery && ` matching "${debouncedSearchQuery}"`}
                   </Col>
                 </Row>
               )}
 
               <Row>
                 {isLoading ? (
-                  <Col className="text-center">
+                  <Col className="text-center my-5">
                     <div className="spinner-border" role="status">
                       <span className="visually-hidden">Loading...</span>
                     </div>
-                    <p className="mt-2">
-                      {isSearching ? "Searching movies..." : "Loading movies..."}
-                    </p>
-                  </Col>
-                ) : (!movies && !error) || isSearching ? (
-                  <Col className="text-center">
-                    <div className="spinner-border" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="mt-2">
-                      {isSearching ? "Searching movies..." : "Loading movies..."}
-                    </p>
+                    <p className="mt-2">Loading movies...</p>
                   </Col>
                 ) : error ? (
                   <Col className="text-center">
@@ -393,15 +331,15 @@ export const MainView = () => {
                     </p>
                   </Col>
                 ) : displayMovies.length === 0 ? (
-                  <Col className="text-center">
+                  <Col className="text-center my-5">
                     <h4>
-                      {searchQuery
-                        ? `No movies found for "${searchQuery}"`
+                      {debouncedSearchQuery
+                        ? `No movies found for "${debouncedSearchQuery}"`
                         : filter === "favorites"
                         ? "You haven't marked any favorites yet"
                         : "No movies available"}
                     </h4>
-                    {searchQuery ? (
+                    {debouncedSearchQuery ? (
                       <p className="text-muted">Try adjusting your search terms</p>
                     ) : filter === "favorites" ? (
                       <p className="text-muted">
@@ -417,7 +355,7 @@ export const MainView = () => {
                       sm={6}
                       md={4}
                       lg={3}
-                      className="mb-4"
+                      className="mb-4 d-flex"
                     >
                       <MovieCard
                         movie={movie}
