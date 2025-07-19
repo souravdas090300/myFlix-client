@@ -16,10 +16,21 @@ import Button from "react-bootstrap/Button";
 import { SearchBar } from "../search-bar/search-bar";
 
 export const MainView = () => {
-  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const getStoredUser = () => {
+    try {
+      const stored = localStorage.getItem("user");
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.error("Error parsing stored user:", error);
+      localStorage.removeItem("user");
+      return null;
+    }
+  };
+
+  const storedUser = getStoredUser();
   const storedToken = localStorage.getItem("token");
-  const [user, setUser] = useState(storedUser || null);
-  const [token, setToken] = useState(storedToken || null);
+  const [user, setUser] = useState(storedUser);
+  const [token, setToken] = useState(storedToken);
   const [movies, setMovies] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all"); // 'all' or 'favorites'
@@ -54,6 +65,27 @@ export const MainView = () => {
 
   const displayMovies = getDisplayMovies();
 
+  // Helper function to add timeout to fetch requests
+  const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - server may be sleeping');
+      }
+      throw error;
+    }
+  };
+
   // Retry function for failed movie fetching
   const retryFetchMovies = async () => {
     if (!token) return;
@@ -64,21 +96,23 @@ export const MainView = () => {
     try {
       // Try to wake up the Heroku app first
       try {
-        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
+        await fetchWithTimeout("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
           method: "GET",
           mode: "no-cors",
-        });
+        }, 10000);
         // Wait a moment for the app to wake up
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (wakeUpError) {
         // Wake-up request failed, but continue with the main request
+        console.log("Wake-up request failed:", wakeUpError.message);
       }
 
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
+        30000
       );
 
       if (!response.ok) {
@@ -124,30 +158,37 @@ export const MainView = () => {
   };
 
   useEffect(() => {
-    if (!token) return;
+    console.log("MainView useEffect - token:", !!token, "user:", !!user);
+    if (!token) {
+      console.log("No token found, skipping movie fetch");
+      return;
+    }
 
     const fetchMovies = async () => {
+      console.log("Starting to fetch movies...");
       setIsLoading(true);
       setError("");
 
       try {
         // Try to wake up the Heroku app first
         try {
-          await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
+          await fetchWithTimeout("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
             method: "GET",
             mode: "no-cors",
-          });
+          }, 10000);
           // Wait a moment for the app to wake up
           await new Promise((resolve) => setTimeout(resolve, 2000));
         } catch (wakeUpError) {
           // Wake-up request failed, but continue with the main request
+          console.log("Wake-up request failed:", wakeUpError.message);
         }
 
-        const response = await fetch(
+        const response = await fetchWithTimeout(
           "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
+          30000
         );
 
         if (!response.ok) {
@@ -163,9 +204,11 @@ export const MainView = () => {
         }
 
         const data = await response.json();
+        console.log("Movies fetched successfully:", data.length, "movies");
         setMovies(data);
         setError("");
       } catch (error) {
+        console.error("Error fetching movies:", error);
         if (error.name === "TypeError" && error.message.includes("fetch")) {
           setError(
             "Network error. Please check your internet connection and try again."
@@ -174,6 +217,7 @@ export const MainView = () => {
           setError(error.message || "Unable to load movies. Please try again later.");
         }
       } finally {
+        console.log("Setting loading to false");
         setIsLoading(false);
       }
     };
@@ -240,6 +284,7 @@ export const MainView = () => {
   );
 
   if (!user) {
+    console.log("No user found, rendering login/signup routes");
     return (
       <Row className="justify-content-md-center">
         <Col md={6} lg={5}>
@@ -277,6 +322,7 @@ export const MainView = () => {
     );
   }
 
+  console.log("User authenticated, rendering main routes. Loading:", isLoading, "Movies:", movies.length);
   return (
     <Routes>
       <Route
