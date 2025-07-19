@@ -53,7 +53,45 @@ export const MainView = () => {
     return moviesToDisplay;
   }, [movies, searchQuery, filter, user]);
 
+  // Calculate counts for filter buttons separately
+  const getAllMoviesCount = useCallback(() => {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return movies.filter((movie) => {
+        const matchesTitle = movie.Title?.toLowerCase().includes(query);
+        const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
+        const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
+        return matchesTitle || matchesGenre || matchesDirector;
+      }).length;
+    }
+    return movies.length;
+  }, [movies, searchQuery]);
+
+  const getFavoritesCount = useCallback(() => {
+    if (!user?.FavoriteMovies || !Array.isArray(user.FavoriteMovies)) {
+      return 0;
+    }
+    
+    let favoriteMovies = movies.filter((movie) => 
+      user.FavoriteMovies.includes(movie._id)
+    );
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      favoriteMovies = favoriteMovies.filter((movie) => {
+        const matchesTitle = movie.Title?.toLowerCase().includes(query);
+        const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
+        const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
+        return matchesTitle || matchesGenre || matchesDirector;
+      });
+    }
+
+    return favoriteMovies.length;
+  }, [movies, searchQuery, user]);
+
   const displayMovies = getDisplayMovies();
+  const allMoviesCount = getAllMoviesCount();
+  const favoritesCount = getFavoritesCount();
 
   const fetchMovies = useCallback(async () => {
     if (!token) return;
@@ -271,7 +309,7 @@ export const MainView = () => {
                     disabled={isLoading}
                     size="sm"
                   >
-                    All Movies {filter === "all" && `(${displayMovies.length})`}
+                    All Movies ({allMoviesCount})
                   </Button>
                   <Button
                     variant={
@@ -281,7 +319,7 @@ export const MainView = () => {
                     disabled={isLoading}
                     size="sm"
                   >
-                    My Favorites {filter === "favorites" && `(${displayMovies.length})`}
+                    My Favorites ({favoritesCount})
                   </Button>
                 </Col>
               </Row>
