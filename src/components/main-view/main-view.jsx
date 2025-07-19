@@ -6,250 +6,35 @@ import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
 import { ProfileView } from "../profile-view/profile-view";
-import { NavigationBar } from "../navigation-bar/navigation-bar";
+import { NavigationBar } from "../navigation-bar/navigation-bar";  // Ensure this file exists
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import Container from "react-bootstrap/Container";
-import Form from "react-bootstrap/Form";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import { SearchBar } from "../search-bar/search-bar";
 
-export const MainView = () => {
-  const getStoredUser = () => {
-    try {
-      const stored = localStorage.getItem("user");
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error("Error parsing stored user:", error);
-      localStorage.removeItem("user");
-      return null;
-    }
-  };
-
-  const storedUser = getStoredUser();
+export const MainView = ({ onUserUpdate, onUserDeregister }) => {
+  const storedUser = JSON.parse(localStorage.getItem("user"));
   const storedToken = localStorage.getItem("token");
-  const [user, setUser] = useState(storedUser);
-  const [token, setToken] = useState(storedToken);
+  const [user, setUser] = useState(storedUser || null);
+  const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all"); // 'all' or 'favorites'
-  const [isSearching, setIsSearching] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  // Filter and search logic - simplified without memoization
-  const getDisplayMovies = () => {
-    let moviesToDisplay = movies;
-    
-    // Apply search filter if there's a search query
-    if (searchQuery && searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      moviesToDisplay = movies.filter((movie) => {
-        const titleMatch = movie.Title?.toLowerCase().includes(query);
-        const genreMatch = movie.Genre?.Name?.toLowerCase().includes(query);
-        const directorMatch = movie.Director?.Name?.toLowerCase().includes(query);
-        return titleMatch || genreMatch || directorMatch;
-      });
-    }
-    
-    // Apply favorites filter
-    if (filter === "favorites") {
-      moviesToDisplay = moviesToDisplay.filter((movie) =>
-        user?.FavoriteMovies?.includes(movie._id)
-      );
-    }
-    
-    return moviesToDisplay;
-  };
-
-  const displayMovies = getDisplayMovies();
-
-  // Helper function to add timeout to fetch requests
-  const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(id);
-      return response;
-    } catch (error) {
-      clearTimeout(id);
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout - server may be sleeping');
-      }
-      throw error;
-    }
-  };
-
-  // Retry function for failed movie fetching
-  const retryFetchMovies = async () => {
-    if (!token) return;
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // Try to wake up the Heroku app first
-      try {
-        await fetchWithTimeout("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
-          method: "GET",
-          mode: "no-cors",
-        }, 10000);
-        // Wait a moment for the app to wake up
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      } catch (wakeUpError) {
-        // Wake-up request failed, but continue with the main request
-        console.log("Wake-up request failed:", wakeUpError.message);
-      }
-
-      const response = await fetchWithTimeout(
-        "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        30000
-      );
-
-      if (!response.ok) {
-        if (response.status === 410) {
-          throw new Error(
-            "The movie database is temporarily unavailable. The server may be sleeping. Please try again in a few moments."
-          );
-        } else if (response.status === 401) {
-          throw new Error("Authentication failed. Please log in again.");
-        } else {
-          throw new Error(`Failed to fetch movies (${response.status})`);
-        }
-      }
-
-      const data = await response.json();
-      setMovies(data);
-      setError("");
-    } catch (error) {
-      if (error.name === "TypeError" && error.message.includes("fetch")) {
-        setError(
-          "Network error. Please check your internet connection and try again."
-        );
-      } else {
-        setError(error.message || "Unable to load movies. Please try again later.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Simple search handler without any complex logic
-  const handleSearchChange = (value) => {
-    setSearchQuery(value);
-  };
-
-  // Stable filter handlers
-  const handleShowAllMovies = () => {
-    setFilter("all");
-  };
-
-  const handleShowFavorites = () => {
-    setFilter("favorites");
-  };
 
   useEffect(() => {
-    console.log("MainView useEffect - token:", !!token, "user:", !!user);
-    if (!token) {
-      console.log("No token found, skipping movie fetch");
-      return;
-    }
+    if (!token) return;
 
     const fetchMovies = async () => {
-      console.log("Starting to fetch movies...");
-      setIsLoading(true);
-      setError("");
-
       try {
-        // Try to wake up the Heroku app first
-        try {
-          await fetchWithTimeout("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
-            method: "GET",
-            mode: "no-cors",
-          }, 10000);
-          // Wait a moment for the app to wake up
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        } catch (wakeUpError) {
-          // Wake-up request failed, but continue with the main request
-          console.log("Wake-up request failed:", wakeUpError.message);
-        }
-
-        const response = await fetchWithTimeout(
-          "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-          30000
-        );
-
-        if (!response.ok) {
-          if (response.status === 410) {
-            throw new Error(
-              "The movie database is temporarily unavailable. The server may be sleeping. Please try again in a few moments."
-            );
-          } else if (response.status === 401) {
-            throw new Error("Authentication failed. Please log in again.");
-          } else {
-            throw new Error(`Failed to fetch movies (${response.status})`);
-          }
-        }
-
+        const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/movies", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch movies');
         const data = await response.json();
-        console.log("Movies fetched successfully:", data.length, "movies");
         setMovies(data);
-        setError("");
       } catch (error) {
         console.error("Error fetching movies:", error);
-        if (error.name === "TypeError" && error.message.includes("fetch")) {
-          setError(
-            "Network error. Please check your internet connection and try again."
-          );
-        } else {
-          setError(error.message || "Unable to load movies. Please try again later.");
-        }
-      } finally {
-        console.log("Setting loading to false");
-        setIsLoading(false);
       }
     };
 
     fetchMovies();
   }, [token]);
-
-  const handleToggleFavorite = async (movieId) => {
-    try {
-      const isFavorite = user.FavoriteMovies?.includes(movieId);
-      const method = isFavorite ? "DELETE" : "POST";
-
-      const response = await fetch(
-        `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}/movies/${movieId}`,
-        {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-      }
-    } catch (error) {
-      // Error toggling favorite - silently fail
-    }
-  };
 
   function MovieViewWrapper() {
     const { movieId } = useParams();
@@ -258,13 +43,7 @@ export const MainView = () => {
     if (!movies) return <Col>Loading movies...</Col>;
     if (!movie) return <Col>Movie not found.</Col>;
 
-    return (
-      <MovieView
-        movie={movie}
-        onFavorite={handleToggleFavorite}
-        isFavorite={user.FavoriteMovies?.includes(movie._id)}
-      />
-    );
+    return <MovieView movie={movie} user={user} token={token} />;
   }
 
   const AuthenticatedLayout = ({ children }) => (
@@ -277,14 +56,13 @@ export const MainView = () => {
           localStorage.clear();
         }}
       />
-      <Container>
-        <Row className="justify-content-md-center mt-4">{children}</Row>
-      </Container>
+      <Row className="justify-content-md-center mt-4">
+        {children}
+      </Row>
     </>
   );
 
   if (!user) {
-    console.log("No user found, rendering login/signup routes");
     return (
       <Row className="justify-content-md-center">
         <Col md={6} lg={5}>
@@ -322,7 +100,6 @@ export const MainView = () => {
     );
   }
 
-  console.log("User authenticated, rendering main routes. Loading:", isLoading, "Movies:", movies.length);
   return (
     <Routes>
       <Route
@@ -358,123 +135,21 @@ export const MainView = () => {
         path="/"
         element={
           <AuthenticatedLayout>
-            <Container>
-              <SearchBar
-                initialSearchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-              />
-
-              {/* Filter Controls */}
-              <Row className="justify-content-center mb-3">
-                <Col xs={12} md={8} lg={6} className="text-center">
-                  <Button
-                    variant={filter === "all" ? "primary" : "outline-primary"}
-                    onClick={handleShowAllMovies}
-                    className="me-2"
-                  >
-                    All Movies
-                  </Button>
-                  <Button
-                    variant={
-                      filter === "favorites" ? "primary" : "outline-primary"
-                    }
-                    onClick={handleShowFavorites}
-                  >
-                    My Favorites
-                  </Button>
+            {!movies ? (
+              <Col>Loading movies...</Col>
+            ) : movies.length === 0 ? (
+              <Col>No movies found.</Col>
+            ) : (
+              movies.map((movie) => (
+                <Col key={movie._id} xs={12} sm={6} md={4} lg={3} className="mb-4">
+                  <MovieCard
+                    movie={movie}
+                    user={user}
+                    token={token}
+                  />
                 </Col>
-              </Row>
-
-              {error && (
-                <Row className="justify-content-center mb-4">
-                  <Col xs={12} md={8} lg={6}>
-                    <Alert variant="danger" className="text-center">
-                      <Alert.Heading>Connection Error</Alert.Heading>
-                      <p>{error}</p>
-                      <Button
-                        variant="outline-danger"
-                        onClick={retryFetchMovies}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? "Retrying..." : "Try Again"}
-                      </Button>
-                    </Alert>
-                  </Col>
-                </Row>
-              )}
-
-              {/* Filter Indicator */}
-              {displayMovies.length > 0 && (
-                <Row className="justify-content-center mb-2">
-                  <Col xs={12} className="text-center text-muted small">
-                    Showing {filter === "favorites" ? "favorite" : "all"} movies
-                    {searchQuery && ` matching "${searchQuery}"`}
-                  </Col>
-                </Row>
-              )}
-
-              <Row>
-                {isLoading ? (
-                  <Col className="text-center">
-                    <div className="spinner-border" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="mt-2">
-                      {isSearching ? "Searching movies..." : "Loading movies..."}
-                    </p>
-                  </Col>
-                ) : (!movies && !error) || isSearching ? (
-                  <Col className="text-center">
-                    <div className="spinner-border" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="mt-2">
-                      {isSearching ? "Searching movies..." : "Loading movies..."}
-                    </p>
-                  </Col>
-                ) : error ? (
-                  <Col className="text-center">
-                    <p className="text-muted">
-                      Please use the "Try Again" button above to reload movies.
-                    </p>
-                  </Col>
-                ) : displayMovies.length === 0 ? (
-                  <Col className="text-center">
-                    <h4>
-                      {searchQuery
-                        ? `No movies found for "${searchQuery}"`
-                        : filter === "favorites"
-                        ? "You haven't marked any favorites yet"
-                        : "No movies available"}
-                    </h4>
-                    {searchQuery ? (
-                      <p className="text-muted">Try adjusting your search terms</p>
-                    ) : filter === "favorites" ? (
-                      <p className="text-muted">
-                        Click the heart icon on movies to add them to favorites
-                      </p>
-                    ) : null}
-                  </Col>
-                ) : (
-                  displayMovies.map((movie) => (
-                    <Col
-                      key={movie._id}
-                      xs={12}
-                      sm={6}
-                      md={4}
-                      lg={3}
-                      className="mb-4"
-                    >
-                      <MovieCard
-                        movie={movie}
-                        onFavorite={handleToggleFavorite}
-                        isFavorite={user.FavoriteMovies?.includes(movie._id)}
-                      />
-                    </Col>
-                  ))
-                )}
-              </Row>
-            </Container>
+              ))
+            )}
           </AuthenticatedLayout>
         }
       />
@@ -485,5 +160,5 @@ export const MainView = () => {
 
 MainView.propTypes = {
   onUserUpdate: PropTypes.func,
-  onUserDeregister: PropTypes.func,
+  onUserDeregister: PropTypes.func
 };
