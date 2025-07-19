@@ -27,36 +27,29 @@ export const MainView = () => {
 
   const getDisplayMovies = useCallback(() => {
     let moviesToDisplay = movies;
-    console.log("All movies:", movies.length);
-    console.log("Search query:", searchQuery);
 
-    // Apply search filter
+    // Apply search filter first
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       moviesToDisplay = movies.filter((movie) => {
         const matchesTitle = movie.Title?.toLowerCase().includes(query);
         const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
         const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
-        const matches = matchesTitle || matchesGenre || matchesDirector;
-        
-        if (matches) {
-          console.log("Movie matches:", movie.Title);
-        }
-        
-        return matches;
+        return matchesTitle || matchesGenre || matchesDirector;
       });
     }
 
-    console.log("Movies after search filter:", moviesToDisplay.length);
-
     // Apply favorites filter
     if (filter === "favorites") {
-      moviesToDisplay = moviesToDisplay.filter((movie) =>
-        user?.FavoriteMovies?.includes(movie._id)
-      );
+      if (!user?.FavoriteMovies || !Array.isArray(user.FavoriteMovies)) {
+        moviesToDisplay = [];
+      } else {
+        moviesToDisplay = moviesToDisplay.filter((movie) => 
+          user.FavoriteMovies.includes(movie._id)
+        );
+      }
     }
 
-    console.log("Final movies to display:", moviesToDisplay.length);
     return moviesToDisplay;
   }, [movies, searchQuery, filter, user]);
 
@@ -106,13 +99,27 @@ export const MainView = () => {
     fetchMovies();
   }, [fetchMovies]);
 
+  // Reset filter when user changes or movies are loaded
+  useEffect(() => {
+    if (filter === "favorites" && (!user?.FavoriteMovies || user.FavoriteMovies.length === 0)) {
+      setFilter("all");
+    }
+  }, [user, movies, filter]);
+
   const handleSearchChange = useCallback((query) => {
-    console.log("Search query changed:", query);
     setSearchQuery(query);
+  }, []);
+
+  const handleFilterChange = useCallback((newFilter) => {
+    setFilter(newFilter);
   }, []);
 
   const handleToggleFavorite = useCallback(
     async (movieId) => {
+      if (!user?.FavoriteMovies) {
+        return;
+      }
+
       try {
         const isFavorite = user.FavoriteMovies.includes(movieId);
         const method = isFavorite ? "DELETE" : "POST";
@@ -259,20 +266,22 @@ export const MainView = () => {
                 <Col className="text-center">
                   <Button
                     variant={filter === "all" ? "primary" : "outline-primary"}
-                    onClick={() => setFilter("all")}
+                    onClick={() => handleFilterChange("all")}
                     className="me-2"
                     disabled={isLoading}
+                    size="sm"
                   >
-                    All Movies
+                    All Movies {filter === "all" && `(${displayMovies.length})`}
                   </Button>
                   <Button
                     variant={
                       filter === "favorites" ? "primary" : "outline-primary"
                     }
-                    onClick={() => setFilter("favorites")}
+                    onClick={() => handleFilterChange("favorites")}
                     disabled={isLoading}
+                    size="sm"
                   >
-                    My Favorites
+                    My Favorites {filter === "favorites" && `(${displayMovies.length})`}
                   </Button>
                 </Col>
               </Row>
@@ -291,6 +300,22 @@ export const MainView = () => {
                         {isLoading ? "Loading..." : "Retry"}
                       </Button>
                     </Alert>
+                  </Col>
+                </Row>
+              )}
+
+              {/* Show current filter status */}
+              {!isLoading && movies.length > 0 && (
+                <Row className="justify-content-center mb-3">
+                  <Col className="text-center">
+                    <small className="text-muted">
+                      {filter === "all" 
+                        ? searchQuery 
+                          ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${searchQuery}"` 
+                          : `Showing all ${displayMovies.length} movies`
+                        : `Showing ${displayMovies.length} favorite movies`
+                      }
+                    </small>
                   </Col>
                 </Row>
               )}
@@ -328,7 +353,7 @@ export const MainView = () => {
                       <MovieCard
                         movie={movie}
                         onFavorite={handleToggleFavorite}
-                        isFavorite={user.FavoriteMovies.includes(movie._id)}
+                        isFavorite={user?.FavoriteMovies?.includes(movie._id) || false}
                       />
                     </Col>
                   ))}
