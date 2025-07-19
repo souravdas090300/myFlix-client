@@ -6,15 +6,24 @@ import Form from "react-bootstrap/Form";
 const SearchBar = ({ initialSearchQuery = "", onSearchChange }) => {
   const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery);
 
+  // Sync with external changes to initialSearchQuery
+  React.useEffect(() => {
+    setLocalSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
   const handleChange = useCallback((e) => {
     const value = e.target.value;
     setLocalSearchQuery(value);
-    onSearchChange(value);
+    if (onSearchChange) {
+      onSearchChange(value);
+    }
   }, [onSearchChange]);
 
   const handleClear = useCallback(() => {
     setLocalSearchQuery("");
-    onSearchChange("");
+    if (onSearchChange) {
+      onSearchChange("");
+    }
   }, [onSearchChange]);
 
   return (
@@ -30,6 +39,9 @@ const SearchBar = ({ initialSearchQuery = "", onSearchChange }) => {
               className="search-input"
               size="lg"
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
             {localSearchQuery && (
               <button

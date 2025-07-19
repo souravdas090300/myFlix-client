@@ -32,24 +32,41 @@ export const SignupView = ({ onSignedUp }) => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (formData.username.length < 3) {
+    // Username validation
+    if (!formData.username || formData.username.trim().length < 3) {
       newErrors.username = "Username must be at least 3 characters";
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = "Username can only contain letters, numbers, and underscores";
     }
     
-    if (formData.password.length < 5) {
+    // Password validation
+    if (!formData.password || formData.password.length < 5) {
       newErrors.password = "Password must be at least 5 characters";
     }
     
+    // Confirm password validation
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords don't match";
     }
     
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email validation
+    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
     
+    // Birthday validation
     if (!formData.birthday) {
       newErrors.birthday = "Birthday is required";
+    } else {
+      const birthdayDate = new Date(formData.birthday);
+      const today = new Date();
+      const minAge = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+      
+      if (birthdayDate >= today) {
+        newErrors.birthday = "Birthday must be in the past";
+      } else if (birthdayDate > minAge) {
+        newErrors.birthday = "You must be at least 13 years old";
+      }
     }
     
     setErrors(newErrors);
@@ -74,6 +91,15 @@ export const SignupView = ({ onSignedUp }) => {
         // App wake-up attempt failed, continuing with signup...
       }
 
+      // Debug: Log the data being sent
+      const requestData = {
+        Username: formData.username,
+        Password: formData.password,
+        Email: formData.email,
+        Birthday: new Date(formData.birthday).toISOString()
+      };
+      console.log("Signup request data:", requestData);
+
       const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,18 +107,29 @@ export const SignupView = ({ onSignedUp }) => {
           Username: formData.username,
           Password: formData.password,
           Email: formData.email,
-          Birthday: formData.birthday
+          Birthday: new Date(formData.birthday).toISOString() // Ensure proper date format
         })
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        // If response is not JSON, create a generic error
+        data = { message: `Server returned ${response.status} status` };
+      }
       
       if (!response.ok) {
-        // Handle different types of errors
+        // Handle different types of errors with more specific messages
         if (response.status === 400) {
-          setServerError("Invalid user data. Please check your information.");
+          const errorMsg = data.message || data.errors || "Invalid user data. Please check your information.";
+          setServerError(`Validation Error: ${errorMsg}`);
         } else if (response.status === 409) {
           setServerError("Username or email already exists. Please try different credentials.");
+        } else if (response.status === 422) {
+          // Specifically handle 422 errors with detailed information
+          const errorMsg = data.message || data.errors || "Invalid data format";
+          setServerError(`Signup validation failed: ${errorMsg}. Please check that all fields are filled correctly.`);
         } else if (response.status === 410) {
           setServerError(
             <div>

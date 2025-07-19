@@ -59,43 +59,6 @@ export const MainView = () => {
     setError("");
 
     try {
-      // TEMPORARY: Mock data while server is down
-      if (token === "mock_jwt_token_for_development") {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate loading
-        const mockMovies = [
-          {
-            _id: "mock1",
-            Title: "The Shawshank Redemption",
-            Description: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
-            Genre: { Name: "Drama" },
-            Director: { Name: "Frank Darabont" },
-            ImagePath: "https://via.placeholder.com/300x450/0066cc/ffffff?text=Shawshank",
-            Featured: true
-          },
-          {
-            _id: "mock2",
-            Title: "The Godfather",
-            Description: "The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.",
-            Genre: { Name: "Crime" },
-            Director: { Name: "Francis Ford Coppola" },
-            ImagePath: "https://via.placeholder.com/300x450/cc6600/ffffff?text=Godfather",
-            Featured: true
-          },
-          {
-            _id: "mock3",
-            Title: "Pulp Fiction",
-            Description: "The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption.",
-            Genre: { Name: "Crime" },
-            Director: { Name: "Quentin Tarantino" },
-            ImagePath: "https://via.placeholder.com/300x450/990099/ffffff?text=Pulp+Fiction",
-            Featured: false
-          }
-        ];
-        setMovies(mockMovies);
-        setIsLoading(false);
-        return;
-      }
-
       // Wake up Heroku server if sleeping
       await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
         method: "GET",
@@ -140,19 +103,6 @@ export const MainView = () => {
   const handleToggleFavorite = useCallback(
     async (movieId) => {
       try {
-        // TEMPORARY: Mock favorite handling while server is down
-        if (token === "mock_jwt_token_for_development") {
-          const isFavorite = user.FavoriteMovies.includes(movieId);
-          const updatedFavorites = isFavorite
-            ? user.FavoriteMovies.filter(id => id !== movieId)
-            : [...user.FavoriteMovies, movieId];
-          
-          const updatedUser = { ...user, FavoriteMovies: updatedFavorites };
-          setUser(updatedUser);
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-          return;
-        }
-
         const isFavorite = user.FavoriteMovies.includes(movieId);
         const method = isFavorite ? "DELETE" : "POST";
 
