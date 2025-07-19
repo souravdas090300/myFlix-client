@@ -1,66 +1,61 @@
-import React, { useState, useCallback } from "react";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
+import React, { useState, useEffect } from 'react';
+import Form from 'react-bootstrap/Form';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import Button from 'react-bootstrap/Button';
 
-const SearchBar = ({ initialSearchQuery = "", onSearchChange }) => {
-  const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery);
+const SearchBar = React.memo(({ initialSearchQuery = '', onSearchChange }) => {
+  const [query, setQuery] = useState(initialSearchQuery);
 
-  // Sync with external changes to initialSearchQuery
-  React.useEffect(() => {
-    setLocalSearchQuery(initialSearchQuery);
+  // Sync with parent when initialSearchQuery changes
+  useEffect(() => {
+    setQuery(initialSearchQuery);
   }, [initialSearchQuery]);
 
-  const handleChange = useCallback((e) => {
+  const handleChange = (e) => {
     const value = e.target.value;
-    console.log("SearchBar handleChange:", value);
-    setLocalSearchQuery(value);
-    if (onSearchChange) {
-      onSearchChange(value);
-    }
-  }, [onSearchChange]);
+    setQuery(value);
+    onSearchChange(value);
+  };
 
-  const handleClear = useCallback(() => {
-    setLocalSearchQuery("");
-    if (onSearchChange) {
-      onSearchChange("");
-    }
-  }, [onSearchChange]);
+  const handleClear = () => {
+    setQuery('');
+    onSearchChange('');
+  };
 
   return (
     <Row className="justify-content-center mb-4">
       <Col xs={12} md={8} lg={6}>
-        <Form.Group>
-          <div className="position-relative">
-            <Form.Control
-              type="text"
-              value={localSearchQuery}
-              onChange={handleChange}
-              placeholder="Search movies by title, genre, or director..."
-              className="search-input"
-              size="lg"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-            />
-            {localSearchQuery && (
-              <button
-                type="button"
-                className="btn btn-link position-absolute top-50 end-0 translate-middle-y pe-3"
-                onClick={handleClear}
-                style={{ border: 'none', background: 'none', color: '#6c757d' }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </Form.Group>
+        <div className="position-relative">
+          <Form.Control
+            type="text"
+            value={query}
+            onChange={handleChange}
+            placeholder="Search movies by title, genre, or director..."
+            className="search-input"
+          />
+          {query && (
+            <Button
+              variant="link"
+              className="position-absolute end-0 top-50 translate-middle-y pe-3"
+              onClick={handleClear}
+              style={{
+                border: 'none',
+                background: 'none',
+                color: '#6c757d',
+                padding: 0,
+                transform: 'translateY(-50%)'
+              }}
+            >
+              ×
+            </Button>
+          )}
+        </div>
       </Col>
     </Row>
   );
-};
+});
 
-SearchBar.displayName = "SearchBar";
+SearchBar.displayName = 'SearchBar';
 
 export { SearchBar };

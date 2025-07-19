@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
 import { MovieCard } from "../movie-card/movie-card";
 import { MovieView } from "../movie-view/movie-view";
@@ -21,77 +21,47 @@ export const MainView = () => {
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const getDisplayMovies = useCallback(() => {
-    let moviesToDisplay = movies;
+  // Debounce the search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
 
-    // Apply search filter first
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      moviesToDisplay = movies.filter((movie) => {
-        const matchesTitle = movie.Title?.toLowerCase().includes(query);
-        const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
-        const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
-        return matchesTitle || matchesGenre || matchesDirector;
-      });
-    }
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
-    // Apply favorites filter
-    if (filter === "favorites") {
-      if (!user?.FavoriteMovies || !Array.isArray(user.FavoriteMovies)) {
-        moviesToDisplay = [];
-      } else {
-        moviesToDisplay = moviesToDisplay.filter((movie) => 
-          user.FavoriteMovies.includes(movie._id)
-        );
-      }
-    }
+  // Single optimized filter calculation
+  const { displayMovies, allCount, favoritesCount } = useMemo(() => {
+    // Filter by favorites first (cheaper operation)
+    const favoriteMovies = user?.FavoriteMovies
+      ? movies.filter(movie => user.FavoriteMovies.includes(movie._id))
+      : [];
 
-    return moviesToDisplay;
-  }, [movies, searchQuery, filter, user]);
+    // Search filter function
+    const filterFn = (movie) => {
+      if (!debouncedSearchQuery.trim()) return true;
+      
+      const query = debouncedSearchQuery.toLowerCase();
+      const matchesTitle = movie.Title?.toLowerCase().includes(query);
+      const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
+      const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
+      return matchesTitle || matchesGenre || matchesDirector;
+    };
 
-  // Calculate counts for filter buttons separately
-  const getAllMoviesCount = useCallback(() => {
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      return movies.filter((movie) => {
-        const matchesTitle = movie.Title?.toLowerCase().includes(query);
-        const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
-        const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
-        return matchesTitle || matchesGenre || matchesDirector;
-      }).length;
-    }
-    return movies.length;
-  }, [movies, searchQuery]);
+    const filteredAll = movies.filter(filterFn);
+    const filteredFavorites = favoriteMovies.filter(filterFn);
 
-  const getFavoritesCount = useCallback(() => {
-    if (!user?.FavoriteMovies || !Array.isArray(user.FavoriteMovies)) {
-      return 0;
-    }
-    
-    let favoriteMovies = movies.filter((movie) => 
-      user.FavoriteMovies.includes(movie._id)
-    );
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      favoriteMovies = favoriteMovies.filter((movie) => {
-        const matchesTitle = movie.Title?.toLowerCase().includes(query);
-        const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
-        const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
-        return matchesTitle || matchesGenre || matchesDirector;
-      });
-    }
-
-    return favoriteMovies.length;
-  }, [movies, searchQuery, user]);
-
-  const displayMovies = getDisplayMovies();
-  const allMoviesCount = getAllMoviesCount();
-  const favoritesCount = getFavoritesCount();
+    return {
+      displayMovies: filter === "favorites" ? filteredFavorites : filteredAll,
+      allCount: filteredAll.length,
+      favoritesCount: filteredFavorites.length
+    };
+  }, [movies, debouncedSearchQuery, filter, user]);
 
   const fetchMovies = useCallback(async () => {
     if (!token) return;
@@ -154,9 +124,7 @@ export const MainView = () => {
 
   const handleToggleFavorite = useCallback(
     async (movieId) => {
-      if (!user?.FavoriteMovies) {
-        return;
-      }
+      if (!user?.FavoriteMovies) return;
 
       try {
         const isFavorite = user.FavoriteMovies.includes(movieId);
@@ -255,6 +223,15 @@ export const MainView = () => {
     );
   }
 
+  // Memoized MovieCard to prevent unnecessary re-renders
+  const MemoizedMovieCard = React.memo(
+    MovieCard,
+    (prevProps, nextProps) => (
+      prevProps.movie._id === nextProps.movie._id &&
+      prevProps.isFavorite === nextProps.isFavorite
+    )
+  );
+
   return (
     <Routes>
       <Route
@@ -309,7 +286,7 @@ export const MainView = () => {
                     disabled={isLoading}
                     size="sm"
                   >
-                    All Movies ({allMoviesCount})
+                    All Movies ({allCount})
                   </Button>
                   <Button
                     variant={
@@ -342,14 +319,13 @@ export const MainView = () => {
                 </Row>
               )}
 
-              {/* Show current filter status */}
               {!isLoading && movies.length > 0 && (
                 <Row className="justify-content-center mb-3">
                   <Col className="text-center">
                     <small className="text-muted">
                       {filter === "all" 
-                        ? searchQuery 
-                          ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${searchQuery}"` 
+                        ? debouncedSearchQuery 
+                          ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${debouncedSearchQuery}"` 
                           : `Showing all ${displayMovies.length} movies`
                         : `Showing ${displayMovies.length} favorite movies`
                       }
@@ -367,8 +343,8 @@ export const MainView = () => {
               ) : displayMovies.length === 0 ? (
                 <Col className="text-center my-5">
                   <h4>
-                    {searchQuery
-                      ? `No results for "${searchQuery}"`
+                    {debouncedSearchQuery
+                      ? `No results for "${debouncedSearchQuery}"`
                       : filter === "favorites"
                       ? "No favorite movies yet"
                       : "No movies available"}
@@ -388,7 +364,7 @@ export const MainView = () => {
                       lg={3}
                       className="mb-4"
                     >
-                      <MovieCard
+                      <MemoizedMovieCard
                         movie={movie}
                         onFavorite={handleToggleFavorite}
                         isFavorite={user?.FavoriteMovies?.includes(movie._id) || false}
