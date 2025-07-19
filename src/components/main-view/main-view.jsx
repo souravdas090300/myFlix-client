@@ -27,18 +27,27 @@ export const MainView = () => {
 
   const getDisplayMovies = useCallback(() => {
     let moviesToDisplay = movies;
+    console.log("All movies:", movies.length);
+    console.log("Search query:", searchQuery);
 
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       moviesToDisplay = movies.filter((movie) => {
-        return (
-          movie.Title?.toLowerCase().includes(query) ||
-          movie.Genre?.Name?.toLowerCase().includes(query) ||
-          movie.Director?.Name?.toLowerCase().includes(query)
-        );
+        const matchesTitle = movie.Title?.toLowerCase().includes(query);
+        const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
+        const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
+        const matches = matchesTitle || matchesGenre || matchesDirector;
+        
+        if (matches) {
+          console.log("Movie matches:", movie.Title);
+        }
+        
+        return matches;
       });
     }
+
+    console.log("Movies after search filter:", moviesToDisplay.length);
 
     // Apply favorites filter
     if (filter === "favorites") {
@@ -47,6 +56,7 @@ export const MainView = () => {
       );
     }
 
+    console.log("Final movies to display:", moviesToDisplay.length);
     return moviesToDisplay;
   }, [movies, searchQuery, filter, user]);
 
@@ -97,6 +107,7 @@ export const MainView = () => {
   }, [fetchMovies]);
 
   const handleSearchChange = useCallback((query) => {
+    console.log("Search query changed:", query);
     setSearchQuery(query);
   }, []);
 
@@ -237,7 +248,10 @@ export const MainView = () => {
             <Container>
               <Row className="justify-content-center mb-4">
                 <Col xs={12} md={8} lg={6}>
-                  <SearchBar onSearchChange={handleSearchChange} />
+                  <SearchBar 
+                    initialSearchQuery={searchQuery}
+                    onSearchChange={handleSearchChange} 
+                  />
                 </Col>
               </Row>
 

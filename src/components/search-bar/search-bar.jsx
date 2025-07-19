@@ -13,6 +13,7 @@ const SearchBar = ({ initialSearchQuery = "", onSearchChange }) => {
 
   const handleChange = useCallback((e) => {
     const value = e.target.value;
+    console.log("SearchBar handleChange:", value);
     setLocalSearchQuery(value);
     if (onSearchChange) {
       onSearchChange(value);
