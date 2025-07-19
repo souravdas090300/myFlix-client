@@ -20,6 +20,27 @@ export const LoginView = ({ onLoggedIn }) => {
       return;
     }
 
+    // TEMPORARY: Mock authentication while server is down
+    // Remove this when Heroku backend is fixed
+    if (username === "demo" && password === "demo123") {
+      setTimeout(() => {
+        const mockUser = {
+          _id: "mock_user_id",
+          Username: "demo",
+          Email: "demo@example.com",
+          Birthday: "1990-01-01",
+          FavoriteMovies: []
+        };
+        const mockToken = "mock_jwt_token_for_development";
+        
+        localStorage.setItem("user", JSON.stringify(mockUser));
+        localStorage.setItem("token", mockToken);
+        onLoggedIn(mockUser, mockToken);
+        setIsLoading(false);
+      }, 1000);
+      return;
+    }
+
     try {
       const data = {
         Username: username,
@@ -53,14 +74,14 @@ export const LoginView = ({ onLoggedIn }) => {
           setError("Unauthorized. Please check your credentials.");
         } else if (response.status === 410) {
           setError("Login service is currently unavailable (410 Gone). The API may be down or moved.");
-        } else if (response.status >= 500) {
-          setError("Server is experiencing issues. Please try again later.");
+        } else if (response.status >= 500 || response.status === 503) {
+          setError("Backend server is currently down (H10 error). Try demo/demo123 for mock login, or contact admin to restart Heroku app.");
         } else {
           setError(result.message || "Login failed. Please try again.");
         }
       }
     } catch (error) {
-      setError("Network error. Please check your connection and try again.");
+      setError("Backend server crashed (H10 error). Use demo/demo123 for mock login, or restart the Heroku backend app.");
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +96,12 @@ export const LoginView = ({ onLoggedIn }) => {
               <Card.Title className="text-center mb-4">
                 <h2>Login</h2>
               </Card.Title>
+              
+              {/* Temporary notice while backend is down */}
+              <Alert variant="info" className="mb-3">
+                <strong>Backend server is currently down!</strong><br/>
+                Use <code>demo</code> / <code>demo123</code> for mock login while the Heroku app is being fixed.
+              </Alert>
               
               {error && <Alert variant="danger" dismissible onClose={() => setError("")}>{error}</Alert>}
               
