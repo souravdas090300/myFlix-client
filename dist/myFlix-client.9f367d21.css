@@ -13196,20 +13196,6 @@ body {
 
 .movie-card {
   cursor: pointer;
-  transition: all .3s;
-}
-
-.movie-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 1rem 3rem #0000002d;
-}
-
-.movie-card .movie-poster {
-  transition: transform .3s;
-}
-
-.movie-card:hover .movie-poster {
-  transform: scale(1.03);
 }
 
 .movie-card .featured-badge {
@@ -13217,62 +13203,6 @@ body {
   position: absolute;
   top: 12px;
   right: 12px;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.movie-card {
-  animation: .5s forwards fadeIn;
-}
-
-.movie-card:first-child {
-  animation-delay: .1s;
-}
-
-.movie-card:nth-child(2) {
-  animation-delay: .2s;
-}
-
-.movie-card:nth-child(3) {
-  animation-delay: .3s;
-}
-
-.movie-card:nth-child(4) {
-  animation-delay: .4s;
-}
-
-.movie-card:nth-child(5) {
-  animation-delay: .5s;
-}
-
-.movie-card:nth-child(6) {
-  animation-delay: .6s;
-}
-
-.movie-card:nth-child(7) {
-  animation-delay: .7s;
-}
-
-.movie-card:nth-child(8) {
-  animation-delay: .8s;
-}
-
-.movie-card:nth-child(9) {
-  animation-delay: .9s;
-}
-
-.movie-card:nth-child(10) {
-  animation-delay: 1s;
 }
 
 .text-rating {
@@ -13284,14 +13214,13 @@ body {
   border-radius: 25px;
   padding: 12px 20px;
   font-size: 1.1rem;
-  transition: all .3s;
+  transition: border-color .2s;
   box-shadow: 0 2px 4px #0000001a;
 }
 
 .search-input:focus {
   border-color: #2e8b57;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px #00000026;
+  box-shadow: 0 2px 6px #0000001f;
 }
 
 .search-input::placeholder {
@@ -13301,5 +13230,94 @@ body {
 
 .spinner-border {
   color: #2e8b57;
+}
+
+@media (width <= 576px) {
+  .main-view {
+    padding: 1rem;
+  }
+
+  .movie-grid-container .col-xs-12, .movie-grid-container .col-sm-12, .movie-grid-container .col-sm-6, .movie-grid-container .col-md-6, .movie-grid-container .col-lg-4, .movie-grid-container .col-xl-3, .movie-grid-container [class*="col-xs-"], .movie-grid-container [class*="col-sm-"], .movie-grid-container [class*="col-md-"], .movie-grid-container [class*="col-lg-"], .movie-grid-container [class*="col-xl-"], .virtualized-movie-grid .col-xs-12, .virtualized-movie-grid .col-sm-12, .virtualized-movie-grid .col-sm-6, .virtualized-movie-grid .col-md-6, .virtualized-movie-grid .col-lg-4, .virtualized-movie-grid .col-xl-3, .virtualized-movie-grid [class*="col-xs-"], .virtualized-movie-grid [class*="col-sm-"], .virtualized-movie-grid [class*="col-md-"], .virtualized-movie-grid [class*="col-lg-"], .virtualized-movie-grid [class*="col-xl-"], .row .col, .row [class^="col-"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  .movie-card {
+    max-width: 100%;
+    margin-bottom: 1.5rem;
+  }
+
+  .movie-card .card-img-top {
+    object-fit: cover;
+    width: 100%;
+    height: 320px;
+  }
+
+  .movie-card .card-title {
+    font-size: 1.1rem;
+  }
+
+  .movie-card .card-text {
+    font-size: .9rem;
+  }
+
+  .movie-card .btn {
+    padding: .4rem .8rem;
+    font-size: .85rem;
+  }
+
+  .search-input {
+    padding: 10px 16px;
+    font-size: 1rem;
+  }
+
+  .filter-buttons .btn {
+    margin: .25rem;
+    font-size: .9rem;
+  }
+}
+
+@media (width >= 577px) and (width <= 768px) {
+  .movie-card .card-img-top {
+    object-fit: cover;
+    height: 350px;
+  }
+}
+
+.virtualized-movie-container {
+  will-change: scroll-position;
+  scroll-behavior: smooth;
+  transform: translateZ(0);
+}
+
+.movie-grid-row {
+  align-items: stretch;
+  gap: 16px;
+  padding: 0 16px;
+  display: flex;
+}
+
+.lazy-image-container {
+  contain: layout style paint;
+  will-change: contents;
+}
+
+.lazy-image-container .lazy-image-placeholder {
+  transition: opacity .2s;
+}
+
+.lazy-image-container img.loading {
+  opacity: 0;
+}
+
+.lazy-image-container img.loaded {
+  opacity: 1;
+  transition: opacity .3s;
+}
+
+.performance-dashboard {
+  backdrop-filter: blur(10px);
+  background-color: #fffffff2;
+  border-radius: 8px;
 }
 /*# sourceMappingURL=myFlix-client.9f367d21.css.map */

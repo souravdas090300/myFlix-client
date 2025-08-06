@@ -2,7 +2,7 @@ import React from "react";
 import { Navbar, Container, Nav, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
-export const NavigationBar = ({ user, onLoggedOut }) => (
+export const NavigationBar = React.memo(({ user, onLoggedOut }) => (
   <Navbar bg="dark" variant="dark" expand="lg">
     <Container>
       <Navbar.Brand as={Link} to="/">
@@ -28,4 +28,6 @@ export const NavigationBar = ({ user, onLoggedOut }) => (
       </Navbar.Collapse>
       </Container>
   </Navbar>
-);
+));
+
+NavigationBar.displayName = 'NavigationBar';

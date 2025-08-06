@@ -2,8 +2,9 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Card, Button, Badge } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { LazyImage } from "../lazy-image/lazy-image";
 
-export const MovieCard = ({ movie, onFavorite, isFavorite }) => (
+const MovieCard = React.memo(({ movie, onFavorite, isFavorite }) => (
   <Card className="movie-card h-100 shadow-sm">
     {/* Featured badge (if needed) */}
     {movie.Featured && (
@@ -12,12 +13,11 @@ export const MovieCard = ({ movie, onFavorite, isFavorite }) => (
       </Badge>
     )}
     
-    <Card.Img 
-      variant="top" 
+    <LazyImage 
       src={movie.ImagePath} 
       alt={movie.Title} 
       className="movie-poster object-fit-cover"
-      style={{ height: "380px" }}
+      style={{ height: "380px", width: "100%" }}
     />
     
     <Card.Body className="d-flex flex-column">
@@ -58,7 +58,9 @@ export const MovieCard = ({ movie, onFavorite, isFavorite }) => (
       </div>
     </Card.Body>
   </Card>
-);
+));
+
+MovieCard.displayName = 'MovieCard';
 
 MovieCard.propTypes = {
   movie: PropTypes.shape({
@@ -74,3 +76,5 @@ MovieCard.propTypes = {
   onFavorite: PropTypes.func,
   isFavorite: PropTypes.bool
 };
+
+export { MovieCard };

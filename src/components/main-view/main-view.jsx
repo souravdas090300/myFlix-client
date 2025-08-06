@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo, useTransition } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useTransition, startTransition as reactStartTransition } from "react";
 import PropTypes from "prop-types";
 import { MovieCard } from "../movie-card/movie-card";
 import { MovieView } from "../movie-view/movie-view";
+import { VirtualizedMovieGrid } from "../virtualized-movie-grid/virtualized-movie-grid";
+import { PerformanceDashboard } from "../performance-dashboard/performance-dashboard";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
@@ -13,8 +15,13 @@ import Container from "react-bootstrap/Container";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import { SearchBar } from "../search-bar/search-bar";
+import { usePerformanceMonitor, useMemoryMonitor } from "../../utils/performance-monitor";
 
 export const MainView = () => {
+  // Performance monitoring in development
+  usePerformanceMonitor('MainView');
+  useMemoryMonitor();
+
   const storedUser = JSON.parse(localStorage.getItem("user"));
   const storedToken = localStorage.getItem("token");
   const [user, setUser] = useState(storedUser || null);
@@ -26,212 +33,256 @@ export const MainView = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [useVirtualization, setUseVirtualization] = useState(true); // Toggle for testing
 
-  // Optimized filter calculation with deferred search query
-  const { displayMovies, allCount, favoritesCount } = useMemo(() => {
-    // Early return if no movies
-    if (!movies.length) {
-      return { displayMovies: [], allCount: 0, favoritesCount: 0 };
-    }
+  // Normalize movies for search optimization
+  const normalizedMovies = useMemo(() => {
+    if (!movies || movies.length === 0) return [];
+    
+    return movies.map(movie => ({
+      ...movie,
+      searchableTitle: movie.Title?.toLowerCase() || '',
+      searchableGenre: movie.Genre?.Name?.toLowerCase() || '',
+      searchableDirector: movie.Director?.Name?.toLowerCase() || ''
+    }));
+  }, [movies]);
 
-    // Filter by favorites first (cheaper operation)
-    const favoriteMovies = user?.FavoriteMovies
-      ? movies.filter(movie => user.FavoriteMovies.includes(movie._id))
-      : [];
-
-    // Search filter function - optimized
-    const filterFn = (movie) => {
-      if (!deferredSearchQuery.trim()) return true;
-      
-      const query = deferredSearchQuery.toLowerCase();
-      
-      // Check title first (most common search)
-      if (movie.Title?.toLowerCase().includes(query)) return true;
-      
-      // Then check genre
-      if (movie.Genre?.Name?.toLowerCase().includes(query)) return true;
-      
-      // Finally check director
-      if (movie.Director?.Name?.toLowerCase().includes(query)) return true;
-      
-      return false;
-    };
-
-    const filteredAll = movies.filter(filterFn);
-    const filteredFavorites = favoriteMovies.filter(filterFn);
-
-    return {
-      displayMovies: filter === "favorites" ? filteredFavorites : filteredAll,
-      allCount: filteredAll.length,
-      favoritesCount: filteredFavorites.length
-    };
-  }, [movies, deferredSearchQuery, filter, user]);
-
-  const fetchMovies = useCallback(async () => {
-    if (!token) return;
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // Wake up Heroku server if sleeping
-      await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
-        method: "GET",
-        mode: "no-cors",
-      });
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const response = await fetch(
-        "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          response.status === 401
-            ? "Please log in again."
-            : "Failed to load movies. Please try again."
-        );
-      }
-
-      const data = await response.json();
-      setMovies(data);
-    } catch (error) {
-      setError(
-        error.message || "Network error. Please check your connection."
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchMovies();
-  }, [fetchMovies]);
-
-  // Reset filter when user changes or movies are loaded
-  useEffect(() => {
-    if (filter === "favorites" && (!user?.FavoriteMovies || user.FavoriteMovies.length === 0)) {
-      setFilter("all");
-    }
-  }, [user, movies, filter]);
-
-  const handleSearchChange = (query) => {
-    setSearchQuery(query);
-    // Use startTransition to mark search filtering as non-urgent
-    startTransition(() => {
-      setDeferredSearchQuery(query);
-    });
-  };
-
-  const handleFilterChange = useCallback((newFilter) => {
-    setFilter(newFilter);
-  }, []);
-
-  const handleToggleFavorite = useCallback(
-    async (movieId) => {
-      if (!user?.FavoriteMovies) return;
-
-      try {
-        const isFavorite = user.FavoriteMovies.includes(movieId);
-        const method = isFavorite ? "DELETE" : "POST";
-
-        const response = await fetch(
-          `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}/movies/${movieId}`,
-          {
-            method,
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const updatedUser = await response.json();
-          setUser(updatedUser);
-          localStorage.setItem("user", JSON.stringify(updatedUser));
-        }
-      } catch (error) {
-        console.error("Failed to update favorites", error);
-      }
-    },
-    [user, token]
-  );
-
-  const MovieViewWrapper = () => {
-    const { movieId } = useParams();
-    const movie = movies.find((m) => m._id === movieId);
-
-    return movie ? (
-      <MovieView
-        movie={movie}
-        onFavorite={handleToggleFavorite}
-        isFavorite={user?.FavoriteMovies?.includes(movie._id)}
-      />
-    ) : (
-      <Col>Movie not found.</Col>
-    );
-  };
-
-  const AuthenticatedLayout = ({ children }) => (
-    <>
-      <NavigationBar
-        user={user}
-        onLoggedOut={() => {
-          setUser(null);
-          setToken(null);
-          localStorage.clear();
-        }}
-      />
-      <Container className="main-content">
-        <Row className="justify-content-center mt-4">{children}</Row>
-      </Container>
-    </>
-  );
-
-  if (!user) {
-    return (
-      <Container className="auth-container">
-        <Row className="justify-content-center">
-          <Col md={6} lg={5}>
-            <Routes>
-              <Route
-                path="/login"
-                element={
-                  <LoginView
-                    onLoggedIn={(user, token) => {
-                      setUser(user);
-                      setToken(token);
-                      localStorage.setItem("user", JSON.stringify(user));
-                      localStorage.setItem("token", token);
-                    }}
-                  />
-                }
-              />
-              <Route
-                path="/signup"
-                element={
-                  <SignupView
-                    onSignedUp={(user, token) => {
-                      setUser(user);
-                      setToken(token);
-                      localStorage.setItem("user", JSON.stringify(user));
-                      localStorage.setItem("token", token);
-                    }}
-                  />
-                }
-              />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Col>
-        </Row>
-      </Container>
-    );
+// Optimized filter calculation with React 18 transitions
+const { displayMovies, allCount, favoritesCount } = useMemo(() => {
+  // Early return if no movies
+  if (!normalizedMovies.length) {
+    return { displayMovies: [], allCount: 0, favoritesCount: 0 };
   }
 
+  // Pre-compute query once
+  const query = deferredSearchQuery.trim().toLowerCase();
+  const hasQuery = query.length > 0;
+
+  // Search filter function - highly optimized
+  const filterFn = (movie) => {
+    if (!hasQuery) return true;
+    
+    // Use pre-computed lowercase strings
+    return movie.searchableTitle.includes(query) ||
+           movie.searchableGenre.includes(query) ||
+           movie.searchableDirector.includes(query);
+  };
+
+  // Get favorite movies if needed
+  const favoriteMovies = user?.FavoriteMovies
+    ? normalizedMovies.filter(movie => user.FavoriteMovies.includes(movie._id))
+    : [];
+
+  // Only filter if there's a query
+  const filteredAll = hasQuery 
+    ? normalizedMovies.filter(filterFn)
+    : normalizedMovies;
+
+  const filteredFavorites = hasQuery
+    ? favoriteMovies.filter(filterFn)
+    : favoriteMovies;
+
+  return {
+    displayMovies: filter === "favorites" ? filteredFavorites : filteredAll,
+    allCount: filteredAll.length,
+    favoritesCount: filteredFavorites.length
+  };
+}, [normalizedMovies, deferredSearchQuery, filter, user]);
+
+// Optimized search handler
+const handleSearchChange = useCallback((query) => {
+  setSearchQuery(query); // Immediate update for UI responsiveness
+  // Use React 18 transition for the heavy filtering operation
+  startTransition(() => {
+    setDeferredSearchQuery(query);
+  });
+}, []);
+
+const fetchMovies = useCallback(async () => {
+  if (!token) return;
+
+  setIsLoading(true);
+  setError("");
+
+  try {
+    // Wake up Heroku server if sleeping
+    await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
+      method: "GET",
+      mode: "no-cors",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const response = await fetch(
+      "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401
+          ? "Please log in again."
+          : "Failed to load movies. Please try again."
+      );
+    }
+
+    const data = await response.json();
+    setMovies(data);
+  } catch (error) {
+    setError(
+      error.message || "Network error. Please check your connection."
+    );
+  } finally {
+    setIsLoading(false);
+  }
+}, [token]);
+
+useEffect(() => {
+  fetchMovies();
+}, [fetchMovies]);
+
+// Reset filter when user changes or movies are loaded
+useEffect(() => {
+  if (filter === "favorites" && (!user?.FavoriteMovies || user.FavoriteMovies.length === 0)) {
+    setFilter("all");
+  }
+}, [user, movies, filter]);
+
+const handleFilterChange = useCallback((newFilter) => {
+  setFilter(newFilter);
+}, []);
+
+// Memoize specific filter handlers to prevent re-renders
+const handleShowAll = useCallback(() => setFilter("all"), []);
+const handleShowFavorites = useCallback(() => setFilter("favorites"), []);
+
+const handleToggleFavorite = useCallback(
+  async (movieId) => {
+    if (!user?.FavoriteMovies) return;
+
+    try {
+      const isFavorite = user.FavoriteMovies.includes(movieId);
+      const method = isFavorite ? "DELETE" : "POST";
+
+      const response = await fetch(
+        `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}/movies/${movieId}`,
+        {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error("Failed to update favorites", error);
+    }
+  },
+  [user, token]
+);
+
+// Memoize MovieViewWrapper to prevent unnecessary re-renders
+const MovieViewWrapper = React.memo(() => {
+  const { movieId } = useParams();
+  const movie = movies.find((m) => m._id === movieId);
+
+  return movie ? (
+    <MovieView
+      movie={movie}
+      onFavorite={handleToggleFavorite}
+      isFavorite={user?.FavoriteMovies?.includes(movie._id)}
+    />
+  ) : (
+    <Col>Movie not found.</Col>
+  );
+});
+MovieViewWrapper.displayName = 'MovieViewWrapper';
+
+// Memoize logout handler to prevent NavigationBar re-renders
+const handleLogout = useCallback(() => {
+  setUser(null);
+  setToken(null);
+  localStorage.clear();
+}, []);
+
+// Memoize login handler to prevent re-creation
+const handleLogin = useCallback((user, token) => {
+  setUser(user);
+  setToken(token);
+  localStorage.setItem("user", JSON.stringify(user));
+  localStorage.setItem("token", token);
+}, []);
+
+// Memoize user update handlers
+const handleUserUpdate = useCallback((updatedUser) => {
+  setUser(updatedUser);
+  localStorage.setItem("user", JSON.stringify(updatedUser));
+}, []);
+
+const handleUserDeregister = useCallback(() => {
+  setUser(null);
+  setToken(null);
+  localStorage.clear();
+}, []);
+
+// Toggle virtualization for performance testing
+const handleToggleVirtualization = useCallback(() => {
+  setUseVirtualization(prev => !prev);
+}, []);
+
+// Memoize the authenticated layout component
+const AuthenticatedLayout = React.memo(({ children }) => (
+  <>
+    <NavigationBar
+      user={user}
+      onLoggedOut={handleLogout}
+    />
+    <Container className="main-content">
+      <Row className="justify-content-center mt-4">{children}</Row>
+    </Container>
+  </>
+));
+AuthenticatedLayout.displayName = 'AuthenticatedLayout';
+
+if (!user) {
   return (
+    <Container className="auth-container">
+      <Row className="justify-content-center">
+        <Col md={6} lg={5}>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <LoginView onLoggedIn={handleLogin} />
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <SignupView onSignedUp={handleLogin} />
+              }
+            />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+return (
+  <>
+    <PerformanceDashboard 
+      onToggleVirtualization={handleToggleVirtualization}
+      useVirtualization={useVirtualization}
+      movieCount={displayMovies.length}
+    />
     <Routes>
       <Route
         path="/profile"
@@ -241,15 +292,8 @@ export const MainView = () => {
               user={user}
               token={token}
               movies={movies}
-              onUserUpdate={(updatedUser) => {
-                setUser(updatedUser);
-                localStorage.setItem("user", JSON.stringify(updatedUser));
-              }}
-              onUserDeregister={() => {
-                setUser(null);
-                setToken(null);
-                localStorage.clear();
-              }}
+              onUserUpdate={handleUserUpdate}
+              onUserDeregister={handleUserDeregister}
             />
           </AuthenticatedLayout>
         }
@@ -280,7 +324,7 @@ export const MainView = () => {
                 <Col className="text-center filter-buttons">
                   <Button
                     variant={filter === "all" ? "primary" : "outline-primary"}
-                    onClick={() => handleFilterChange("all")}
+                    onClick={handleShowAll}
                     className="me-2"
                     disabled={isLoading}
                     size="sm"
@@ -291,7 +335,7 @@ export const MainView = () => {
                     variant={
                       filter === "favorites" ? "primary" : "outline-primary"
                     }
-                    onClick={() => handleFilterChange("favorites")}
+                    onClick={handleShowFavorites}
                     disabled={isLoading}
                     size="sm"
                   >
@@ -328,7 +372,7 @@ export const MainView = () => {
                           : `Showing all ${displayMovies.length} movies`
                         : `Showing ${displayMovies.length} favorite movies`
                       }
-                      {isPending && <span className="ms-2">🔍 Searching...</span>}
+                      {isPending && <span className="ms-2">🔍 Filtering...</span>}
                     </small>
                   </Col>
                 </Row>
@@ -353,13 +397,23 @@ export const MainView = () => {
                     <p>Click the heart icon to add favorites</p>
                   )}
                 </Col>
+              ) : useVirtualization && displayMovies.length > 20 ? (
+                // Use virtualization for large lists
+                <VirtualizedMovieGrid
+                  movies={displayMovies}
+                  onFavorite={handleToggleFavorite}
+                  userFavorites={user?.FavoriteMovies || []}
+                  containerHeight={600}
+                  itemsPerRow={4}
+                />
               ) : (
+                // Traditional grid for smaller lists
                 <Row className="movie-grid-container">
                   {displayMovies.map((movie) => (
                     <Col
                       key={movie._id}
                       xs={12}
-                      sm={12}
+                      sm={6}
                       md={6}
                       lg={4}
                       xl={3}
@@ -380,6 +434,7 @@ export const MainView = () => {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 };
 

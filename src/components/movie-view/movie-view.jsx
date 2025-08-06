@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { Link } from "react-router-dom";
 import { Container, Row, Col, Card, ListGroup, Badge, Button } from 'react-bootstrap';
 
-export const MovieView = ({ movie, onFavorite, isFavorite }) => {
+export const MovieView = React.memo(({ movie, onFavorite, isFavorite }) => {
   // Safely access nested properties
   const directorName = movie.Director?.Name || 'Unknown director';
   const directorBirth = movie.Director?.Birth || 'Unknown birth date';
@@ -110,7 +110,9 @@ export const MovieView = ({ movie, onFavorite, isFavorite }) => {
       </Row>
     </Container>
   );
-};
+});
+
+MovieView.displayName = 'MovieView';
 
 MovieView.propTypes = {
   movie: PropTypes.shape({
