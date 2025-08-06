@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import PropTypes from "prop-types";
 import { MovieCard } from "../movie-card/movie-card";
 import { MovieView } from "../movie-view/movie-view";
@@ -21,36 +21,40 @@ export const MainView = () => {
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [deferredSearchQuery, setDeferredSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isPending, startTransition] = useTransition();
 
-  // Debounce the search query
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
-
-  // Single optimized filter calculation
+  // Optimized filter calculation with deferred search query
   const { displayMovies, allCount, favoritesCount } = useMemo(() => {
+    // Early return if no movies
+    if (!movies.length) {
+      return { displayMovies: [], allCount: 0, favoritesCount: 0 };
+    }
+
     // Filter by favorites first (cheaper operation)
     const favoriteMovies = user?.FavoriteMovies
       ? movies.filter(movie => user.FavoriteMovies.includes(movie._id))
       : [];
 
-    // Search filter function
+    // Search filter function - optimized
     const filterFn = (movie) => {
-      if (!debouncedSearchQuery.trim()) return true;
+      if (!deferredSearchQuery.trim()) return true;
       
-      const query = debouncedSearchQuery.toLowerCase();
-      const matchesTitle = movie.Title?.toLowerCase().includes(query);
-      const matchesGenre = movie.Genre?.Name?.toLowerCase().includes(query);
-      const matchesDirector = movie.Director?.Name?.toLowerCase().includes(query);
-      return matchesTitle || matchesGenre || matchesDirector;
+      const query = deferredSearchQuery.toLowerCase();
+      
+      // Check title first (most common search)
+      if (movie.Title?.toLowerCase().includes(query)) return true;
+      
+      // Then check genre
+      if (movie.Genre?.Name?.toLowerCase().includes(query)) return true;
+      
+      // Finally check director
+      if (movie.Director?.Name?.toLowerCase().includes(query)) return true;
+      
+      return false;
     };
 
     const filteredAll = movies.filter(filterFn);
@@ -61,7 +65,7 @@ export const MainView = () => {
       allCount: filteredAll.length,
       favoritesCount: filteredFavorites.length
     };
-  }, [movies, debouncedSearchQuery, filter, user]);
+  }, [movies, deferredSearchQuery, filter, user]);
 
   const fetchMovies = useCallback(async () => {
     if (!token) return;
@@ -114,9 +118,13 @@ export const MainView = () => {
     }
   }, [user, movies, filter]);
 
-  const handleSearchChange = useCallback((query) => {
+  const handleSearchChange = (query) => {
     setSearchQuery(query);
-  }, []);
+    // Use startTransition to mark search filtering as non-urgent
+    startTransition(() => {
+      setDeferredSearchQuery(query);
+    });
+  };
 
   const handleFilterChange = useCallback((newFilter) => {
     setFilter(newFilter);
@@ -223,15 +231,6 @@ export const MainView = () => {
     );
   }
 
-  // Memoized MovieCard to prevent unnecessary re-renders
-  const MemoizedMovieCard = React.memo(
-    MovieCard,
-    (prevProps, nextProps) => (
-      prevProps.movie._id === nextProps.movie._id &&
-      prevProps.isFavorite === nextProps.isFavorite
-    )
-  );
-
   return (
     <Routes>
       <Route
@@ -278,7 +277,7 @@ export const MainView = () => {
               </Row>
 
               <Row className="justify-content-center mb-4">
-                <Col className="text-center">
+                <Col className="text-center filter-buttons">
                   <Button
                     variant={filter === "all" ? "primary" : "outline-primary"}
                     onClick={() => handleFilterChange("all")}
@@ -324,11 +323,12 @@ export const MainView = () => {
                   <Col className="text-center">
                     <small className="text-muted">
                       {filter === "all" 
-                        ? debouncedSearchQuery 
-                          ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${debouncedSearchQuery}"` 
+                        ? deferredSearchQuery 
+                          ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${deferredSearchQuery}"` 
                           : `Showing all ${displayMovies.length} movies`
                         : `Showing ${displayMovies.length} favorite movies`
                       }
+                      {isPending && <span className="ms-2">🔍 Searching...</span>}
                     </small>
                   </Col>
                 </Row>
@@ -343,8 +343,8 @@ export const MainView = () => {
               ) : displayMovies.length === 0 ? (
                 <Col className="text-center my-5">
                   <h4>
-                    {debouncedSearchQuery
-                      ? `No results for "${debouncedSearchQuery}"`
+                    {deferredSearchQuery
+                      ? `No results for "${deferredSearchQuery}"`
                       : filter === "favorites"
                       ? "No favorite movies yet"
                       : "No movies available"}
@@ -354,17 +354,18 @@ export const MainView = () => {
                   )}
                 </Col>
               ) : (
-                <Row>
+                <Row className="movie-grid-container">
                   {displayMovies.map((movie) => (
                     <Col
                       key={movie._id}
                       xs={12}
-                      sm={6}
-                      md={4}
-                      lg={3}
-                      className="mb-4"
+                      sm={12}
+                      md={6}
+                      lg={4}
+                      xl={3}
+                      className="mb-4 d-flex"
                     >
-                      <MemoizedMovieCard
+                      <MovieCard
                         movie={movie}
                         onFavorite={handleToggleFavorite}
                         isFavorite={user?.FavoriteMovies?.includes(movie._id) || false}

@@ -104,3 +104,70 @@ body {
 .spinner-border {
   color: $primary;
 }
+
+// Mobile responsive styles
+@media (max-width: 576px) {
+  .main-view {
+    padding: 1rem;
+  }
+  
+  // Force single column layout on mobile
+  .movie-grid-container {
+    .col-xs-12,
+    .col-sm-12,
+    [class*="col-xs-"],
+    [class*="col-sm-"] {
+      flex: 0 0 100% !important;
+      max-width: 100% !important;
+    }
+  }
+  
+  // Optimize movie card for mobile
+  .movie-card {
+    margin-bottom: 1.5rem;
+    max-width: 100%;
+    
+    .card-img-top {
+      height: 320px;
+      object-fit: cover;
+      width: 100%;
+    }
+    
+    .card-title {
+      font-size: 1.1rem;
+    }
+    
+    .card-text {
+      font-size: 0.9rem;
+    }
+    
+    .btn {
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+    }
+  }
+  
+  // Improve search bar on mobile
+  .search-input {
+    font-size: 1rem;
+    padding: 10px 16px;
+  }
+  
+  // Better button spacing on mobile
+  .filter-buttons {
+    .btn {
+      margin: 0.25rem;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Tablet responsive styles
+@media (min-width: 577px) and (max-width: 768px) {
+  .movie-card {
+    .card-img-top {
+      height: 350px;
+      object-fit: cover;
+    }
+  }
+}
