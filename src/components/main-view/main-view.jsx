@@ -3,7 +3,6 @@ import PropTypes from "prop-types";
 import { MovieCard } from "../movie-card/movie-card";
 import { MovieView } from "../movie-view/movie-view";
 import { VirtualizedMovieGrid } from "../virtualized-movie-grid/virtualized-movie-grid";
-import { PerformanceDashboard } from "../performance-dashboard/performance-dashboard";
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
@@ -17,13 +16,91 @@ import Alert from "react-bootstrap/Alert";
 import { SearchBar } from "../search-bar/search-bar";
 import { usePerformanceMonitor, useMemoryMonitor } from "../../utils/performance-monitor";
 
+// Top-level memoized components to prevent remounts caused by redefining
+// them inside MainView. These receive all data via props so they don't
+// close over MainView locals and remain stable across renders.
+const MovieViewWrapper = React.memo(({ movies, onFavorite, user }) => {
+  const { movieId } = useParams();
+  const movie = movies.find((m) => m._id === movieId);
+
+  return movie ? (
+    <MovieView
+      movie={movie}
+      onFavorite={onFavorite}
+      isFavorite={user?.FavoriteMovies?.includes(movie._id)}
+    />
+  ) : (
+    <Col>Movie not found.</Col>
+  );
+});
+MovieViewWrapper.displayName = 'MovieViewWrapper';
+
+const AuthenticatedLayout = React.memo(({
+  user,
+  onLoggedOut,
+  onSearchChange,
+  filter,
+  onShowAll,
+  onShowFavorites,
+  isLoading,
+  allCount,
+  favoritesCount,
+  children
+}) => (
+  <>
+    <NavigationBar user={user} onLoggedOut={onLoggedOut} />
+    <Container className="main-content">
+      <Row className="justify-content-center mt-3 mb-2">
+        <Col xs={12} md={8} lg={6}>
+          <SearchBar onSearchChange={onSearchChange} />
+        </Col>
+      </Row>
+
+      <Row className="justify-content-center mb-3">
+        <Col xs={12} md={8} lg={6} className="text-center">
+          <div className="filter-buttons d-inline-block">
+            <Button
+              variant={filter === "all" ? "primary" : "outline-primary"}
+              onClick={onShowAll}
+              className="me-2"
+              disabled={isLoading}
+              size="sm"
+            >
+              All Movies ({allCount})
+            </Button>
+            <Button
+              variant={filter === "favorites" ? "primary" : "outline-primary"}
+              onClick={onShowFavorites}
+              disabled={isLoading}
+              size="sm"
+            >
+              My Favorites ({favoritesCount})
+            </Button>
+          </div>
+        </Col>
+      </Row>
+
+      <Row className="justify-content-center mt-4">{children}</Row>
+    </Container>
+  </>
+));
+AuthenticatedLayout.displayName = 'AuthenticatedLayout';
+
 export const MainView = () => {
   // Performance monitoring in development
   usePerformanceMonitor('MainView');
   useMemoryMonitor();
 
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const storedToken = localStorage.getItem("token");
+  // Safely parse stored user/token; avoid throwing if localStorage entry is missing or invalid
+  let storedUser = null;
+  try {
+    const raw = localStorage.getItem("user");
+    storedUser = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.warn('Failed to parse stored user', e);
+    storedUser = null;
+  }
+  const storedToken = localStorage.getItem("token") || null;
   const [user, setUser] = useState(storedUser || null);
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
@@ -89,11 +166,14 @@ const { displayMovies, allCount, favoritesCount } = useMemo(() => {
   };
 }, [normalizedMovies, deferredSearchQuery, filter, user]);
 
+  // debug removed to avoid TDZ errors in some bundling environments
+
 // Optimized search handler
+// Keep parent updates light: do not set `searchQuery` on every keystroke to avoid
+// re-rendering the main layout. SearchBar manages local input and will call this
+// handler after debounce; we only update the deferred value inside a transition.
 const handleSearchChange = useCallback((query) => {
-  setSearchQuery(query); // Immediate update for UI responsiveness
-  // Use React 18 transition for the heavy filtering operation
-  startTransition(() => {
+  reactStartTransition(() => {
     setDeferredSearchQuery(query);
   });
 }, []);
@@ -187,22 +267,7 @@ const handleToggleFavorite = useCallback(
   [user, token]
 );
 
-// Memoize MovieViewWrapper to prevent unnecessary re-renders
-const MovieViewWrapper = React.memo(() => {
-  const { movieId } = useParams();
-  const movie = movies.find((m) => m._id === movieId);
-
-  return movie ? (
-    <MovieView
-      movie={movie}
-      onFavorite={handleToggleFavorite}
-      isFavorite={user?.FavoriteMovies?.includes(movie._id)}
-    />
-  ) : (
-    <Col>Movie not found.</Col>
-  );
-});
-MovieViewWrapper.displayName = 'MovieViewWrapper';
+// (Inner duplicate MovieViewWrapper removed - using top-level memoized version)
 
 // Memoize logout handler to prevent NavigationBar re-renders
 const handleLogout = useCallback(() => {
@@ -236,19 +301,7 @@ const handleToggleVirtualization = useCallback(() => {
   setUseVirtualization(prev => !prev);
 }, []);
 
-// Memoize the authenticated layout component
-const AuthenticatedLayout = React.memo(({ children }) => (
-  <>
-    <NavigationBar
-      user={user}
-      onLoggedOut={handleLogout}
-    />
-    <Container className="main-content">
-      <Row className="justify-content-center mt-4">{children}</Row>
-    </Container>
-  </>
-));
-AuthenticatedLayout.displayName = 'AuthenticatedLayout';
+// (Inner duplicate AuthenticatedLayout removed - using top-level memoized version)
 
 if (!user) {
   return (
@@ -278,16 +331,21 @@ if (!user) {
 
 return (
   <>
-    <PerformanceDashboard 
-      onToggleVirtualization={handleToggleVirtualization}
-      useVirtualization={useVirtualization}
-      movieCount={displayMovies.length}
-    />
     <Routes>
       <Route
         path="/profile"
         element={
-          <AuthenticatedLayout>
+          <AuthenticatedLayout
+            user={user}
+            onLoggedOut={handleLogout}
+            onSearchChange={handleSearchChange}
+            filter={filter}
+            onShowAll={handleShowAll}
+            onShowFavorites={handleShowFavorites}
+            isLoading={isLoading}
+            allCount={allCount}
+            favoritesCount={favoritesCount}
+          >
             <ProfileView
               user={user}
               token={token}
@@ -301,49 +359,40 @@ return (
       <Route
         path="/movies/:movieId"
         element={
-          <AuthenticatedLayout>
-            <MovieViewWrapper />
+          <AuthenticatedLayout
+            user={user}
+            onLoggedOut={handleLogout}
+            onSearchChange={handleSearchChange}
+            filter={filter}
+            onShowAll={handleShowAll}
+            onShowFavorites={handleShowFavorites}
+            isLoading={isLoading}
+            allCount={allCount}
+            favoritesCount={favoritesCount}
+          >
+            <MovieViewWrapper
+              movies={movies}
+              onFavorite={handleToggleFavorite}
+              user={user}
+            />
           </AuthenticatedLayout>
         }
       />
-      <Route
+        <Route
         path="/"
         element={
-          <AuthenticatedLayout>
+          <AuthenticatedLayout
+            user={user}
+            onLoggedOut={handleLogout}
+            onSearchChange={handleSearchChange}
+            filter={filter}
+            onShowAll={handleShowAll}
+            onShowFavorites={handleShowFavorites}
+            isLoading={isLoading}
+            allCount={allCount}
+            favoritesCount={favoritesCount}
+          >
             <Container>
-              <Row className="justify-content-center mb-4">
-                <Col xs={12} md={8} lg={6}>
-                  <SearchBar 
-                    initialSearchQuery={searchQuery}
-                    onSearchChange={handleSearchChange} 
-                  />
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center mb-4">
-                <Col className="text-center filter-buttons">
-                  <Button
-                    variant={filter === "all" ? "primary" : "outline-primary"}
-                    onClick={handleShowAll}
-                    className="me-2"
-                    disabled={isLoading}
-                    size="sm"
-                  >
-                    All Movies ({allCount})
-                  </Button>
-                  <Button
-                    variant={
-                      filter === "favorites" ? "primary" : "outline-primary"
-                    }
-                    onClick={handleShowFavorites}
-                    disabled={isLoading}
-                    size="sm"
-                  >
-                    My Favorites ({favoritesCount})
-                  </Button>
-                </Col>
-              </Row>
-
               {error && (
                 <Row className="justify-content-center mb-4">
                   <Col xs={12} md={8} lg={6}>

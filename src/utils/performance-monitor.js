@@ -10,28 +10,34 @@ export const usePerformanceMonitor = (componentName) => {
 
   useEffect(() => {
     renderCount.current += 1;
-    
-    if (process.env.NODE_ENV === 'development') {
+
+    const shouldLog = (typeof window !== 'undefined' && window.__DEBUG_PERF) || process.env.DEBUG_PERF === 'true';
+    if (shouldLog && process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log(`[Performance] ${componentName} rendered ${renderCount.current} times`);
-      
-      // Log render time
-      const renderTime = Date.now() - startTime.current;
-      if (renderTime > 16) { // More than one frame (16ms)
-        console.warn(`[Performance] ${componentName} slow render: ${renderTime}ms`);
-      }
     }
-    
+
+    // Log render time only for obviously slow renders (>200ms)
+    const renderTime = Date.now() - startTime.current;
+    if (renderTime > 200 && process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.warn(`[Performance] ${componentName} slow render: ${renderTime}ms`);
+    }
+
     startTime.current = Date.now();
   });
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    const shouldLog = (typeof window !== 'undefined' && window.__DEBUG_PERF) || process.env.DEBUG_PERF === 'true';
+    if (shouldLog && process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log(`[Performance] ${componentName} mounted`);
-      
       return () => {
+        // eslint-disable-next-line no-console
         console.log(`[Performance] ${componentName} unmounted after ${renderCount.current} renders`);
       };
     }
+    return undefined;
   }, [componentName]);
 };
 

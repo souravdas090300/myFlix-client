@@ -3,82 +3,73 @@ import { Form, Button, Spinner } from 'react-bootstrap';
 import { IoClose, IoSearch } from 'react-icons/io5';
 
 const SearchBar = React.memo(({ 
-  initialSearchQuery = '', 
   onSearchChange,
-  debounceTime = 100, // Reduced from 200ms to 100ms
-  placeholder = "Search..."
+  placeholder = "Search...",
+  debounceTime = 500
 }) => {
-  const [query, setQuery] = useState(initialSearchQuery);
-  const [isSearching, setIsSearching] = useState(false);
+  // Local input state with debounce to keep typing smooth and avoid heavy parent re-renders
+  const inputRef = useRef(null);
+  const [localValue, setLocalValue] = useState('');
   const timeoutRef = useRef(null);
-  const mountedRef = useRef(true);
+  // ensure timeout cleared on unmount
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
-  // Cleanup on unmount
+  // Optional debug: enable by setting window.__DEBUG_SEARCHBAR = true in dev tools
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      clearTimeout(timeoutRef.current);
-    };
+    if (window?.__DEBUG_SEARCHBAR) {
+      // eslint-disable-next-line no-console
+      console.debug('[SearchBar] mounted');
+      return () => console.debug('[SearchBar] unmounted');
+    }
+    return undefined;
   }, []);
 
-  // Sync with parent when initialSearchQuery changes
-  useEffect(() => {
-    if (mountedRef.current) {
-      setQuery(initialSearchQuery);
-    }
-  }, [initialSearchQuery]);
+  const triggerChange = useCallback((v) => {
+    onSearchChange?.(v);
+  }, [onSearchChange]);
 
-  // Optimized debounce with cancellation
-  const debouncedSearch = useCallback((value) => {
-    clearTimeout(timeoutRef.current);
-    
-    // Remove the undefined deferredSearchQuery reference
-    timeoutRef.current = setTimeout(() => {
-      if (mountedRef.current) {
-        setIsSearching(true);
-        Promise.resolve(onSearchChange(value))
-          .finally(() => {
-            if (mountedRef.current) setIsSearching(false);
-          });
-      }
-    }, debounceTime);
-  }, [onSearchChange, debounceTime]);
-
-  // Handle input changes with immediate feedback
   const handleChange = useCallback((e) => {
-    const value = e.target.value;
-    setQuery(value);
-    debouncedSearch(value);
-  }, [debouncedSearch]);
+    const v = e.target.value;
+    setLocalValue(v);
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => triggerChange(v), debounceTime);
+  if (window?.__DEBUG_SEARCHBAR) {
+    // eslint-disable-next-line no-console
+    console.debug('[SearchBar] localValue change ->', v);
+  }
+  }, [triggerChange, debounceTime]);
 
   const handleClear = useCallback(() => {
-    setQuery('');
-    debouncedSearch('');
-    document.getElementById('search-input')?.focus();
-  }, [debouncedSearch]);
+    clearTimeout(timeoutRef.current);
+    setLocalValue('');
+    triggerChange('');
+    // keep focus in the input
+    inputRef.current?.focus();
+    if (window?.__DEBUG_SEARCHBAR) {
+      // eslint-disable-next-line no-console
+      console.debug('[SearchBar] cleared and focused');
+    }
+  }, [triggerChange]);
+
+  // No caret restoration — parent updates won't clobber local typing while input is focused.
 
   return (
-    <div className="position-relative">
+    <div className="position-relative" onClick={() => inputRef.current?.focus()}>
       <div className="d-flex align-items-center">
-        <IoSearch className="position-absolute ms-3" size={18} />
+        {/* Make icon non-interactive so clicks reach the input */}
+        <IoSearch className="position-absolute ms-3" size={18} style={{ pointerEvents: 'none' }} />
         <Form.Control
           id="search-input"
+          ref={inputRef}
           type="text"
-          value={query}
+          value={localValue}
           onChange={handleChange}
           className="ps-5 py-2 rounded-pill"
           placeholder={placeholder}
           autoComplete="off"
           aria-label="Search"
         />
-        {isSearching && (
-          <Spinner 
-            animation="border" 
-            size="sm" 
-            className="position-absolute end-0 me-5"
-          />
-        )}
-        {query && !isSearching && (
+        {localValue && (
           <Button
             variant="link"
             onClick={handleClear}
@@ -92,6 +83,7 @@ const SearchBar = React.memo(({
     </div>
   );
 });
+
 
 SearchBar.displayName = 'SearchBar';
 

@@ -70,6 +70,14 @@ A modern React-based single-page application for browsing and managing your favo
 npm run build
 ```
 
+### Run tests
+
+Run the unit tests with:
+
+```bash
+npm test
+```
+
 ## 📱 Usage
 
 ### Getting Started
@@ -104,14 +112,15 @@ src/
 
 ## 🔗 API Integration
 
-This application connects to the myFlix REST API for:
+This application connects to the myFlix REST API (server) for:
 - User authentication and management
 - Movie data retrieval
 - Favorites management
 - User profile operations
 
-**API Repository**: [myFlix API](https://github.com/souravdas090300/myFlix-client)
-Api hosting URL: [netlify] (https://my-flix-clients.netlify.app/)
+Update the API base URL in the client if your server is hosted at a different address. The server code (Achievement 2) should be in a separate repository — update the link below to point to that repo.
+
+**API Repository (server)**: replace with your server repo URL
 
 ## 🌟 Key Features Implementation
 
