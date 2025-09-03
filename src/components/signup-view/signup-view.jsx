@@ -82,14 +82,7 @@ export const SignupView = ({ onSignedUp }) => {
     setIsLoading(true);
 
     try {
-      // First, try to wake up the Heroku app by making a simple GET request
-      try {
-        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", { method: 'GET' });
-        // Wait a moment for the app to fully wake up
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch (e) {
-        // App wake-up attempt failed, continuing with signup...
-      }
+  // No pre-wake call. Call the signup endpoint directly; surface errors to the user.
 
       // Debug: Log the data being sent
       const requestData = {

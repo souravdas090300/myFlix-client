@@ -3,59 +3,64 @@ import { Form, Button, Spinner } from 'react-bootstrap';
 import { IoClose, IoSearch } from 'react-icons/io5';
 
 const SearchBar = React.memo(({ 
-  initialSearchQuery = '', 
+  value = '',
   onSearchChange,
-  debounceTime = 100, // Reduced from 200ms to 100ms
-  placeholder = "Search..."
+  placeholder = "Search...",
+  debounceTime = 150
 }) => {
-  const [query, setQuery] = useState(initialSearchQuery);
-  const [isSearching, setIsSearching] = useState(false);
+  // Local input state with debounce to keep typing smooth and avoid heavy parent re-renders
+  const inputRef = useRef(null);
+  const [localValue, setLocalValue] = useState(value);
   const timeoutRef = useRef(null);
-  const mountedRef = useRef(true);
 
-  // Cleanup on unmount
+  // Sync when parent value changes, but only if the input isn't currently focused
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      clearTimeout(timeoutRef.current);
-    };
+    try {
+      const el = inputRef.current;
+      if (!el || document.activeElement !== el) {
+        setLocalValue(value);
+      }
+    } catch (e) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  // Debug: log mounts/unmounts to detect unexpected unmounting
+  useEffect(() => {
+    // console.debug can be removed once issue is resolved
+    console.debug('[SearchBar] mounted');
+    return () => console.debug('[SearchBar] unmounted');
   }, []);
 
-  // Sync with parent when initialSearchQuery changes
-  useEffect(() => {
-    if (mountedRef.current) {
-      setQuery(initialSearchQuery);
-    }
-  }, [initialSearchQuery]);
+  const triggerChange = useCallback((v) => {
+    onSearchChange?.(v);
+  }, [onSearchChange]);
 
-  // Optimized debounce with cancellation
-  const debouncedSearch = useCallback((value) => {
-    clearTimeout(timeoutRef.current);
-    
-    // Remove the undefined deferredSearchQuery reference
-    timeoutRef.current = setTimeout(() => {
-      if (mountedRef.current) {
-        setIsSearching(true);
-        Promise.resolve(onSearchChange(value))
-          .finally(() => {
-            if (mountedRef.current) setIsSearching(false);
-          });
-      }
-    }, debounceTime);
-  }, [onSearchChange, debounceTime]);
-
-  // Handle input changes with immediate feedback
   const handleChange = useCallback((e) => {
-    const value = e.target.value;
-    setQuery(value);
-    debouncedSearch(value);
-  }, [debouncedSearch]);
+    const v = e.target.value;
+    // capture caret position
+    try {
+      selectionRef.current.start = e.target.selectionStart;
+      selectionRef.current.end = e.target.selectionEnd;
+    } catch (e) {
+      // ignore
+    }
+    setLocalValue(v);
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => triggerChange(v), debounceTime);
+  console.debug('[SearchBar] localValue change ->', v);
+  }, [triggerChange, debounceTime]);
 
   const handleClear = useCallback(() => {
-    setQuery('');
-    debouncedSearch('');
-    document.getElementById('search-input')?.focus();
-  }, [debouncedSearch]);
+    clearTimeout(timeoutRef.current);
+    setLocalValue('');
+    triggerChange('');
+    // keep focus in the input
+    inputRef.current?.focus();
+  console.debug('[SearchBar] cleared and focused');
+  }, [triggerChange]);
+
+  // No caret restoration — parent updates won't clobber local typing while input is focused.
 
   return (
     <div className="position-relative">
@@ -63,22 +68,16 @@ const SearchBar = React.memo(({
         <IoSearch className="position-absolute ms-3" size={18} />
         <Form.Control
           id="search-input"
+          ref={inputRef}
           type="text"
-          value={query}
+          value={localValue}
           onChange={handleChange}
           className="ps-5 py-2 rounded-pill"
           placeholder={placeholder}
           autoComplete="off"
           aria-label="Search"
         />
-        {isSearching && (
-          <Spinner 
-            animation="border" 
-            size="sm" 
-            className="position-absolute end-0 me-5"
-          />
-        )}
-        {query && !isSearching && (
+        {localValue && (
           <Button
             variant="link"
             onClick={handleClear}

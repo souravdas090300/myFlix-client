@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { MovieCard } from '../movie-card/movie-card';
 import Row from 'react-bootstrap/Row';
@@ -16,6 +16,8 @@ export const VirtualizedMovieGrid = ({
   itemsPerRow = 4 
 }) => {
   const [currentItemsPerRow, setCurrentItemsPerRow] = useState(itemsPerRow);
+  const containerRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
 
   // Responsive items per row based on screen size
   useEffect(() => {
@@ -39,7 +41,9 @@ export const VirtualizedMovieGrid = ({
   }, [itemsPerRow]);
 
   // For now, we'll render all movies. In a real implementation,
-  // we would use libraries like react-window or react-virtualized
+  // we will implement a lightweight windowing approach to avoid rendering
+  // the entire list at once. This reduces DOM nodes and expensive image
+  // observers/loads for off-screen items.
   const movieRows = useMemo(() => {
     const rows = [];
     for (let i = 0; i < movies.length; i += currentItemsPerRow) {
@@ -48,17 +52,46 @@ export const VirtualizedMovieGrid = ({
     return rows;
   }, [movies, currentItemsPerRow]);
 
+  // Basic windowing calculations
+  const ROW_ESTIMATED_HEIGHT = 440; // estimated height per row (px)
+  const totalRows = movieRows.length;
+
+  const onScroll = useCallback(() => {
+    if (!containerRef.current) return;
+    // use rAF to avoid layout thrash
+    const top = containerRef.current.scrollTop;
+    setScrollTop(top);
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [onScroll]);
+
+  const firstVisibleRow = Math.max(0, Math.floor(scrollTop / ROW_ESTIMATED_HEIGHT) - 1);
+  const visibleRowCount = Math.ceil(containerHeight / ROW_ESTIMATED_HEIGHT) + 2; // buffer
+  const lastVisibleRow = Math.min(totalRows - 1, firstVisibleRow + visibleRowCount - 1);
+
+  const topSpacerHeight = firstVisibleRow * ROW_ESTIMATED_HEIGHT;
+  const bottomSpacerHeight = Math.max(0, (totalRows - lastVisibleRow - 1) * ROW_ESTIMATED_HEIGHT);
+
   return (
-    <div 
-      className="virtualized-movie-grid" 
-      style={{ 
-        maxHeight: containerHeight, 
+    <div
+      ref={containerRef}
+      className="virtualized-movie-grid"
+      style={{
+        maxHeight: containerHeight,
         overflowY: 'auto',
         padding: '0 15px'
       }}
     >
-      {movieRows.map((row, rowIndex) => (
-        <Row key={rowIndex} className="mb-4">
+      {/* Top spacer to maintain scroll height */}
+      <div style={{ height: topSpacerHeight }} />
+
+      {movieRows.slice(firstVisibleRow, lastVisibleRow + 1).map((row, rowIndex) => (
+        <Row key={firstVisibleRow + rowIndex} className="mb-4">
           {row.map((movie) => (
             <Col
               key={movie._id}
@@ -78,6 +111,9 @@ export const VirtualizedMovieGrid = ({
           ))}
         </Row>
       ))}
+
+      {/* Bottom spacer */}
+      <div style={{ height: bottomSpacerHeight }} />
     </div>
   );
 };

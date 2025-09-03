@@ -26,13 +26,7 @@ export const LoginView = ({ onLoggedIn }) => {
         Password: password
       };
 
-      // Try to wake up the Heroku app first
-      try {
-        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", { method: 'GET' });
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (e) {
-        // App wake-up attempt failed, continuing with login...
-      }
+  // No pre-wake call. Call the login endpoint directly and let errors surface to the UI.
 
       const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/login", {
         method: "POST",

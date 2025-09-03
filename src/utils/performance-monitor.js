@@ -14,9 +14,10 @@ export const usePerformanceMonitor = (componentName) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[Performance] ${componentName} rendered ${renderCount.current} times`);
       
-      // Log render time
+      // Log render time (only warn if render is truly slow)
       const renderTime = Date.now() - startTime.current;
-      if (renderTime > 16) { // More than one frame (16ms)
+      const SLOW_RENDER_THRESHOLD = 200; // ms
+      if (renderTime > SLOW_RENDER_THRESHOLD) {
         console.warn(`[Performance] ${componentName} slow render: ${renderTime}ms`);
       }
     }

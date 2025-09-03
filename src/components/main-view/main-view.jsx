@@ -4,7 +4,7 @@ import { MovieCard } from "../movie-card/movie-card";
 import { MovieView } from "../movie-view/movie-view";
 import { VirtualizedMovieGrid } from "../virtualized-movie-grid/virtualized-movie-grid";
 import { PerformanceDashboard } from "../performance-dashboard/performance-dashboard";
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, useParams, Outlet } from "react-router-dom";
 import { LoginView } from "../login-view/login-view";
 import { SignupView } from "../signup-view/signup-view";
 import { ProfileView } from "../profile-view/profile-view";
@@ -17,13 +17,54 @@ import Alert from "react-bootstrap/Alert";
 import { SearchBar } from "../search-bar/search-bar";
 import { usePerformanceMonitor, useMemoryMonitor } from "../../utils/performance-monitor";
 
+// Move these out of MainView to avoid re-creating on every render which can cause
+// child component remounts (and input focus loss).
+const MovieViewWrapper = React.memo(({ movies, onFavorite, user }) => {
+  const { movieId } = useParams();
+  const movie = movies.find((m) => m._id === movieId);
+
+  return movie ? (
+    <MovieView
+      movie={movie}
+      onFavorite={onFavorite}
+      isFavorite={user?.FavoriteMovies?.includes(movie._id)}
+    />
+  ) : (
+    <Col>Movie not found.</Col>
+  );
+});
+MovieViewWrapper.displayName = 'MovieViewWrapper';
+
+const AuthenticatedLayout = React.memo(({ user, onLoggedOut }) => (
+  <>
+    <NavigationBar
+      user={user}
+      onLoggedOut={onLoggedOut}
+    />
+    <Container className="main-content">
+      <Row className="justify-content-center mt-4">
+        <Outlet />
+      </Row>
+    </Container>
+  </>
+));
+AuthenticatedLayout.displayName = 'AuthenticatedLayout';
+
 export const MainView = () => {
   // Performance monitoring in development
   usePerformanceMonitor('MainView');
   useMemoryMonitor();
 
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const storedToken = localStorage.getItem("token");
+  // Safely parse stored user/token; avoid throwing if localStorage entry is missing or invalid
+  let storedUser = null;
+  try {
+    const raw = localStorage.getItem("user");
+    storedUser = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.warn('Failed to parse stored user', e);
+    storedUser = null;
+  }
+  const storedToken = localStorage.getItem("token") || null;
   const [user, setUser] = useState(storedUser || null);
   const [token, setToken] = useState(storedToken || null);
   const [movies, setMovies] = useState([]);
@@ -105,12 +146,8 @@ const fetchMovies = useCallback(async () => {
   setError("");
 
   try {
-    // Wake up Heroku server if sleeping
-    await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
-      method: "GET",
-      mode: "no-cors",
-    });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+  // Removed no-op wake-up request to avoid CORS/no-cors masking real errors.
+  // If the API is slow to start, the user will see a network error and can retry.
 
     const response = await fetch(
       "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
@@ -187,22 +224,7 @@ const handleToggleFavorite = useCallback(
   [user, token]
 );
 
-// Memoize MovieViewWrapper to prevent unnecessary re-renders
-const MovieViewWrapper = React.memo(() => {
-  const { movieId } = useParams();
-  const movie = movies.find((m) => m._id === movieId);
-
-  return movie ? (
-    <MovieView
-      movie={movie}
-      onFavorite={handleToggleFavorite}
-      isFavorite={user?.FavoriteMovies?.includes(movie._id)}
-    />
-  ) : (
-    <Col>Movie not found.</Col>
-  );
-});
-MovieViewWrapper.displayName = 'MovieViewWrapper';
+// ...existing code...
 
 // Memoize logout handler to prevent NavigationBar re-renders
 const handleLogout = useCallback(() => {
@@ -236,19 +258,7 @@ const handleToggleVirtualization = useCallback(() => {
   setUseVirtualization(prev => !prev);
 }, []);
 
-// Memoize the authenticated layout component
-const AuthenticatedLayout = React.memo(({ children }) => (
-  <>
-    <NavigationBar
-      user={user}
-      onLoggedOut={handleLogout}
-    />
-    <Container className="main-content">
-      <Row className="justify-content-center mt-4">{children}</Row>
-    </Container>
-  </>
-));
-AuthenticatedLayout.displayName = 'AuthenticatedLayout';
+// ...existing code...
 
 if (!user) {
   return (
@@ -284,157 +294,139 @@ return (
       movieCount={displayMovies.length}
     />
     <Routes>
-      <Route
-        path="/profile"
-        element={
-          <AuthenticatedLayout>
-            <ProfileView
-              user={user}
-              token={token}
-              movies={movies}
-              onUserUpdate={handleUserUpdate}
-              onUserDeregister={handleUserDeregister}
-            />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/movies/:movieId"
-        element={
-          <AuthenticatedLayout>
-            <MovieViewWrapper />
-          </AuthenticatedLayout>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <AuthenticatedLayout>
-            <Container>
+      <Route path="/login" element={<LoginView onLoggedIn={handleLogin} />} />
+      <Route path="/signup" element={<SignupView onSignedUp={handleLogin} />} />
+
+      {/* Authenticated routes use layout route so layout isn't remounted */}
+      <Route element={<AuthenticatedLayout user={user} onLoggedOut={handleLogout} />}>
+        <Route path="/profile" element={<ProfileView user={user} token={token} movies={movies} onUserUpdate={handleUserUpdate} onUserDeregister={handleUserDeregister} />} />
+        <Route path="/movies/:movieId" element={<MovieViewWrapper movies={movies} onFavorite={handleToggleFavorite} user={user} />} />
+        <Route path="/" element={
+          <Container>
+            <Row className="justify-content-center mb-4">
+              <Col xs={12} md={8} lg={6}>
+                <SearchBar 
+                  value={searchQuery}
+                  onSearchChange={handleSearchChange} 
+                />
+              </Col>
+            </Row>
+
+            <Row className="justify-content-center mb-4">
+              <Col className="text-center filter-buttons">
+                <Button
+                  variant={filter === "all" ? "primary" : "outline-primary"}
+                  onClick={handleShowAll}
+                  className="me-2"
+                  disabled={isLoading}
+                  size="sm"
+                >
+                  All Movies ({allCount})
+                </Button>
+                <Button
+                  variant={
+                    filter === "favorites" ? "primary" : "outline-primary"
+                  }
+                  onClick={handleShowFavorites}
+                  disabled={isLoading}
+                  size="sm"
+                >
+                  My Favorites ({favoritesCount})
+                </Button>
+              </Col>
+            </Row>
+
+            {error && (
               <Row className="justify-content-center mb-4">
                 <Col xs={12} md={8} lg={6}>
-                  <SearchBar 
-                    initialSearchQuery={searchQuery}
-                    onSearchChange={handleSearchChange} 
-                  />
-                </Col>
-              </Row>
-
-              <Row className="justify-content-center mb-4">
-                <Col className="text-center filter-buttons">
-                  <Button
-                    variant={filter === "all" ? "primary" : "outline-primary"}
-                    onClick={handleShowAll}
-                    className="me-2"
-                    disabled={isLoading}
-                    size="sm"
-                  >
-                    All Movies ({allCount})
-                  </Button>
-                  <Button
-                    variant={
-                      filter === "favorites" ? "primary" : "outline-primary"
-                    }
-                    onClick={handleShowFavorites}
-                    disabled={isLoading}
-                    size="sm"
-                  >
-                    My Favorites ({favoritesCount})
-                  </Button>
-                </Col>
-              </Row>
-
-              {error && (
-                <Row className="justify-content-center mb-4">
-                  <Col xs={12} md={8} lg={6}>
-                    <Alert variant="danger" className="text-center">
-                      {error}
-                      <Button
-                        variant="outline-danger"
-                        onClick={fetchMovies}
-                        disabled={isLoading}
-                        className="mt-2"
-                      >
-                        {isLoading ? "Loading..." : "Retry"}
-                      </Button>
-                    </Alert>
-                  </Col>
-                </Row>
-              )}
-
-              {!isLoading && movies.length > 0 && (
-                <Row className="justify-content-center mb-3">
-                  <Col className="text-center">
-                    <small className="text-muted">
-                      {filter === "all" 
-                        ? deferredSearchQuery 
-                          ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${deferredSearchQuery}"` 
-                          : `Showing all ${displayMovies.length} movies`
-                        : `Showing ${displayMovies.length} favorite movies`
-                      }
-                      {isPending && <span className="ms-2">🔍 Filtering...</span>}
-                    </small>
-                  </Col>
-                </Row>
-              )}
-
-              {isLoading ? (
-                <Col className="text-center my-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                </Col>
-              ) : displayMovies.length === 0 ? (
-                <Col className="text-center my-5">
-                  <h4>
-                    {deferredSearchQuery
-                      ? `No results for "${deferredSearchQuery}"`
-                      : filter === "favorites"
-                      ? "No favorite movies yet"
-                      : "No movies available"}
-                  </h4>
-                  {filter === "favorites" && (
-                    <p>Click the heart icon to add favorites</p>
-                  )}
-                </Col>
-              ) : useVirtualization && displayMovies.length > 20 ? (
-                // Use virtualization for large lists
-                <VirtualizedMovieGrid
-                  movies={displayMovies}
-                  onFavorite={handleToggleFavorite}
-                  userFavorites={user?.FavoriteMovies || []}
-                  containerHeight={600}
-                  itemsPerRow={4}
-                />
-              ) : (
-                // Traditional grid for smaller lists
-                <Row className="movie-grid-container">
-                  {displayMovies.map((movie) => (
-                    <Col
-                      key={movie._id}
-                      xs={12}
-                      sm={6}
-                      md={6}
-                      lg={4}
-                      xl={3}
-                      className="mb-4 d-flex"
+                  <Alert variant="danger" className="text-center">
+                    {error}
+                    <Button
+                      variant="outline-danger"
+                      onClick={fetchMovies}
+                      disabled={isLoading}
+                      className="mt-2"
                     >
-                      <MovieCard
-                        movie={movie}
-                        onFavorite={handleToggleFavorite}
-                        isFavorite={user?.FavoriteMovies?.includes(movie._id) || false}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-              )}
-            </Container>
-          </AuthenticatedLayout>
-        }
-      />
+                      {isLoading ? "Loading..." : "Retry"}
+                    </Button>
+                  </Alert>
+                </Col>
+              </Row>
+            )}
+
+            {!isLoading && movies.length > 0 && (
+              <Row className="justify-content-center mb-3">
+                <Col className="text-center">
+                  <small className="text-muted">
+                    {filter === "all" 
+                      ? deferredSearchQuery 
+                        ? `Showing ${displayMovies.length} of ${movies.length} movies matching "${deferredSearchQuery}"` 
+                        : `Showing all ${displayMovies.length} movies`
+                      : `Showing ${displayMovies.length} favorite movies`
+                    }
+                    {isPending && <span className="ms-2">🔍 Filtering...</span>}
+                  </small>
+                </Col>
+              </Row>
+            )}
+
+            {isLoading ? (
+              <Col className="text-center my-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </Col>
+            ) : displayMovies.length === 0 ? (
+              <Col className="text-center my-5">
+                <h4>
+                  {deferredSearchQuery
+                    ? `No results for "${deferredSearchQuery}"`
+                    : filter === "favorites"
+                    ? "No favorite movies yet"
+                    : "No movies available"}
+                </h4>
+                {filter === "favorites" && (
+                  <p>Click the heart icon to add favorites</p>
+                )}
+              </Col>
+            ) : useVirtualization && displayMovies.length > 20 ? (
+              // Use virtualization for large lists
+              <VirtualizedMovieGrid
+                movies={displayMovies}
+                onFavorite={handleToggleFavorite}
+                userFavorites={user?.FavoriteMovies || []}
+                containerHeight={600}
+                itemsPerRow={4}
+              />
+            ) : (
+              // Traditional grid for smaller lists
+              <Row className="movie-grid-container">
+                {displayMovies.map((movie) => (
+                  <Col
+                    key={movie._id}
+                    xs={12}
+                    sm={6}
+                    md={6}
+                    lg={4}
+                    xl={3}
+                    className="mb-4 d-flex"
+                  >
+                    <MovieCard
+                      movie={movie}
+                      onFavorite={handleToggleFavorite}
+                      isFavorite={user?.FavoriteMovies?.includes(movie._id) || false}
+                    />
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </Container>
+        } />
+      </Route>
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    </>
+  </>
   );
 };
 
