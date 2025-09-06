@@ -17,16 +17,16 @@ export const VirtualizedMovieGrid = ({
 }) => {
   const [currentItemsPerRow, setCurrentItemsPerRow] = useState(itemsPerRow);
 
-  // Responsive items per row based on screen size
+  // Responsive items per row based on screen size - Force single column on mobile
   useEffect(() => {
     const updateItemsPerRow = () => {
       const width = window.innerWidth;
-      if (width <= 576) {
-        setCurrentItemsPerRow(1); // Single column on mobile
-      } else if (width <= 768) {
-        setCurrentItemsPerRow(2); // Two columns on tablet
-      } else if (width <= 992) {
-        setCurrentItemsPerRow(3); // Three columns on small desktop
+      if (width <= 991) {
+        setCurrentItemsPerRow(1); // Single column on mobile and tablets (up to 991px)
+      } else if (width <= 1200) {
+        setCurrentItemsPerRow(2); // Two columns on small desktop
+      } else if (width <= 1400) {
+        setCurrentItemsPerRow(3); // Three columns on medium desktop
       } else {
         setCurrentItemsPerRow(itemsPerRow); // Default for large screens
       }
@@ -63,11 +63,16 @@ export const VirtualizedMovieGrid = ({
             <Col
               key={movie._id}
               xs={12}
-              sm={currentItemsPerRow === 1 ? 12 : 6}
-              md={currentItemsPerRow <= 2 ? 6 : 4}
-              lg={currentItemsPerRow <= 3 ? 4 : 3}
-              xl={currentItemsPerRow <= 4 ? 3 : 2}
-              className="mb-4 d-flex"
+              sm={12}
+              md={currentItemsPerRow === 1 ? 12 : (currentItemsPerRow <= 2 ? 6 : 4)}
+              lg={currentItemsPerRow === 1 ? 12 : (currentItemsPerRow <= 3 ? 4 : 3)}
+              xl={currentItemsPerRow === 1 ? 12 : (currentItemsPerRow <= 4 ? 3 : 2)}
+              className={`mb-4 d-flex ${currentItemsPerRow === 1 ? 'mobile-single-col' : ''}`}
+              style={currentItemsPerRow === 1 ? { 
+                flex: '0 0 100%', 
+                maxWidth: '100%', 
+                width: '100%' 
+              } : {}}
             >
               <MovieCard
                 movie={movie}

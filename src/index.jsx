@@ -6,7 +6,12 @@ import { MainView } from "./components/main-view/main-view";
 
 const App = () => {
   return (
-    <BrowserRouter>  {/* <-- Wrap MainView with BrowserRouter */}
+    <BrowserRouter 
+      future={{ 
+        v7_startTransition: true,
+        v7_relativeSplatPath: true 
+      }}
+    >
       <MainView />
     </BrowserRouter>
   );

@@ -18,6 +18,80 @@ body {
   line-height: 1.6;
 }
 
+// Mobile-first responsive design - Force single column on mobile and small tablets
+@media (max-width: 991px) {
+  .virtualized-movie-grid .row {
+    --bs-gutter-x: 0.5rem;
+  }
+  
+  // Force single column layout on mobile and small screens
+  .virtualized-movie-grid .col-12,
+  .virtualized-movie-grid .col-sm-6,
+  .virtualized-movie-grid .col-sm-12,
+  .virtualized-movie-grid .col-md-4,
+  .virtualized-movie-grid .col-md-6,
+  .virtualized-movie-grid .col-lg-3,
+  .virtualized-movie-grid .col-lg-4,
+  .virtualized-movie-grid .col-xl-3,
+  .virtualized-movie-grid .col-xxl-2,
+  .virtualized-movie-grid [class*="col-"],
+  .mobile-single-col {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  .movie-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin-bottom: 1rem;
+  }
+  
+  // Ensure containers take full width
+  .container,
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  // Force main view to have less padding on mobile
+  .main-view {
+    padding: 1rem;
+  }
+}
+
+// Additional super aggressive mobile override
+@media (max-width: 991px) {
+  .virtualized-movie-grid {
+    .row > * {
+      flex: 0 0 100% !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+    
+    // Override any Bootstrap column classes
+    .row [class*="col-"] {
+      flex-basis: 100% !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+    
+    // Force movie cards to full width
+    .movie-card {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+  
+  // Force single column on any grid element
+  .row .col,
+  .row [class^="col-"],
+  .row [class*=" col-"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 // Main view container
 .main-view {
   padding: 2rem;

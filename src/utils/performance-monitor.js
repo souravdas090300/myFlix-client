@@ -17,9 +17,10 @@ export const usePerformanceMonitor = (componentName) => {
       console.log(`[Performance] ${componentName} rendered ${renderCount.current} times`);
     }
 
-    // Log render time only for obviously slow renders (>200ms)
+    // Silence performance warnings in development to reduce console noise
+    // Only log extremely slow renders (>10000ms) to identify real performance issues
     const renderTime = Date.now() - startTime.current;
-    if (renderTime > 200 && process.env.NODE_ENV === 'development') {
+    if (renderTime > 10000 && process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
       console.warn(`[Performance] ${componentName} slow render: ${renderTime}ms`);
     }
