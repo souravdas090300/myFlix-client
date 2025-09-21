@@ -1,6 +1,6 @@
 # myFlix-Client
 
-A modern React-based single-page application for browsing and managing your favorite movies. This client-side application connects to the myFlix REST API to provide a comprehensive movie discovery experience.
+A modern React-based sin## 🛠 Technologies Usedle-page application for browsing and managing your favorite movies. This client-side application connects to the myFlix REST API to provide a comprehensive movie discovery experience.
 
 ## 🎬 Features
 
@@ -16,7 +16,32 @@ A modern React-based single-page application for browsing and managing your favo
 
 **[View Live Application](https://my-flix-clients.netlify.app/)**
 
-## 🛠 Technologies Used
+## � Screenshots
+
+### Main Movie Browser
+![Main View](./screenshots/main-view.png)
+*Browse through the extensive movie collection with search and filtering capabilities*
+
+### Movie Details
+![Movie Details](./screenshots/movie-details.png)  
+*View comprehensive movie information including cast, director, and plot details*
+
+### User Profile & Favorites
+![Profile View](./screenshots/profile-view.png)
+*Manage your account settings and view your favorite movies collection*
+
+### Mobile Responsive Design
+<div align="center">
+  <img src="./screenshots/mobile-view.png" alt="Mobile View" width="300"/>
+</div>
+
+*Optimized single-column layout for mobile devices*
+
+### User Authentication
+![Login View](./screenshots/login-view.png)
+*Secure user authentication with clean, modern interface*
+
+## �🛠 Technologies Used
 
 ### Frontend Framework
 - **React 18** - Modern frontend library with hooks
