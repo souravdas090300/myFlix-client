@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { Button, Form, Alert, Card, Container, Row, Col } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { apiUrl } from "../../utils/api";
 
 export const LoginView = ({ onLoggedIn }) => {
   const [username, setUsername] = useState("");
@@ -28,13 +29,13 @@ export const LoginView = ({ onLoggedIn }) => {
 
       // Try to wake up the Heroku app first
       try {
-        await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/", { method: 'GET' });
+        await fetch(apiUrl(), { method: 'GET' });
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
         // App wake-up attempt failed, continuing with login...
       }
 
-      const response = await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/login", {
+      const response = await fetch(apiUrl("/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)

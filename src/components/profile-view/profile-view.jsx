@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { Button, Form, Card, Row, Col } from "react-bootstrap";
+import { apiUrl } from "../../utils/api";
 
 export const ProfileView = ({
   user,
@@ -33,7 +34,7 @@ export const ProfileView = ({
     setSuccess("");
     try {
       const response = await fetch(
-        `https://ancient-woodland-05995-715624a89d87.herokuapp.com/users/${user.Username}`,
+        apiUrl(`/users/${user.Username}`),
         {
           method: "PUT",
           headers: {
@@ -64,7 +65,7 @@ export const ProfileView = ({
     if (!window.confirm("Are you sure you want to delete your account?")) return;
     try {
       const response = await fetch(
-        `https://ancient-woodland-05995-715624a89d87.herokuapp.com/users/${user.Username}`,
+        apiUrl(`/users/${user.Username}`),
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` }

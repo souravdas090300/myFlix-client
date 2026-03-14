@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Form, Button, Alert, Card, Spinner } from "react-bootstrap";
 import { useNavigate, Link } from "react-router-dom";
+import { apiUrl } from "../../utils/api";
 
 export const SignupView = ({ onSignedUp }) => {
   const [formData, setFormData] = useState({
@@ -84,7 +85,7 @@ export const SignupView = ({ onSignedUp }) => {
     try {
       // First, try to wake up the Heroku app by making a simple GET request
       try {
-        await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/", { method: 'GET' });
+        await fetch(apiUrl(), { method: 'GET' });
         // Wait a moment for the app to fully wake up
         await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
@@ -100,7 +101,7 @@ export const SignupView = ({ onSignedUp }) => {
       };
       console.log("Signup request data:", requestData);
 
-      const response = await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/users", {
+      const response = await fetch(apiUrl("/users"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -156,7 +157,7 @@ export const SignupView = ({ onSignedUp }) => {
       // Check if response has expected structure
       if (data && data.Username) {
         // User created successfully, now login
-        const loginResponse = await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/login", {
+        const loginResponse = await fetch(apiUrl("/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

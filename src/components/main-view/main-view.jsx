@@ -14,6 +14,7 @@ import Container from "react-bootstrap/Container";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import { SearchBar } from "../search-bar/search-bar";
+import { apiUrl } from "../../utils/api";
 import { usePerformanceMonitor, useMemoryMonitor } from "../../utils/performance-monitor";
 
 // Top-level memoized components to prevent remounts caused by redefining
@@ -186,14 +187,14 @@ const fetchMovies = useCallback(async () => {
 
   try {
     // Wake up Heroku server if sleeping
-    await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/", {
+    await fetch(apiUrl(), {
       method: "GET",
       mode: "no-cors",
     });
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const response = await fetch(
-      "https://ancient-woodland-05995-715624a89d87.herokuapp.com/movies",
+      apiUrl("/movies"),
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -246,7 +247,7 @@ const handleToggleFavorite = useCallback(
       const method = isFavorite ? "DELETE" : "POST";
 
       const response = await fetch(
-        `https://ancient-woodland-05995-715624a89d87.herokuapp.com/users/${user.Username}/movies/${movieId}`,
+        apiUrl(`/users/${user.Username}/movies/${movieId}`),
         {
           method,
           headers: {
