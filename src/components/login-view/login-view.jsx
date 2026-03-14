@@ -28,13 +28,13 @@ export const LoginView = ({ onLoggedIn }) => {
 
       // Try to wake up the Heroku app first
       try {
-        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", { method: 'GET' });
+        await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/", { method: 'GET' });
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
         // App wake-up attempt failed, continuing with login...
       }
 
-      const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/login", {
+      const response = await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)

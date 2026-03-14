@@ -84,7 +84,7 @@ export const SignupView = ({ onSignedUp }) => {
     try {
       // First, try to wake up the Heroku app by making a simple GET request
       try {
-        await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", { method: 'GET' });
+        await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/", { method: 'GET' });
         // Wait a moment for the app to fully wake up
         await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
@@ -100,7 +100,7 @@ export const SignupView = ({ onSignedUp }) => {
       };
       console.log("Signup request data:", requestData);
 
-      const response = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/users", {
+      const response = await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -156,7 +156,7 @@ export const SignupView = ({ onSignedUp }) => {
       // Check if response has expected structure
       if (data && data.Username) {
         // User created successfully, now login
-        const loginResponse = await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/login", {
+        const loginResponse = await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

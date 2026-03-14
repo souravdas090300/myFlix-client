@@ -186,14 +186,14 @@ const fetchMovies = useCallback(async () => {
 
   try {
     // Wake up Heroku server if sleeping
-    await fetch("https://movie-flix-fb6c35ebba0a.herokuapp.com/", {
+    await fetch("https://ancient-woodland-05995-715624a89d87.herokuapp.com/", {
       method: "GET",
       mode: "no-cors",
     });
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const response = await fetch(
-      "https://movie-flix-fb6c35ebba0a.herokuapp.com/movies",
+      "https://ancient-woodland-05995-715624a89d87.herokuapp.com/movies",
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -246,7 +246,7 @@ const handleToggleFavorite = useCallback(
       const method = isFavorite ? "DELETE" : "POST";
 
       const response = await fetch(
-        `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}/movies/${movieId}`,
+        `https://ancient-woodland-05995-715624a89d87.herokuapp.com/users/${user.Username}/movies/${movieId}`,
         {
           method,
           headers: {

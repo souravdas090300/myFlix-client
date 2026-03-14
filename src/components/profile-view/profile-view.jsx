@@ -33,7 +33,7 @@ export const ProfileView = ({
     setSuccess("");
     try {
       const response = await fetch(
-        `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}`,
+        `https://ancient-woodland-05995-715624a89d87.herokuapp.com/users/${user.Username}`,
         {
           method: "PUT",
           headers: {
@@ -64,7 +64,7 @@ export const ProfileView = ({
     if (!window.confirm("Are you sure you want to delete your account?")) return;
     try {
       const response = await fetch(
-        `https://movie-flix-fb6c35ebba0a.herokuapp.com/users/${user.Username}`,
+        `https://ancient-woodland-05995-715624a89d87.herokuapp.com/users/${user.Username}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` }
